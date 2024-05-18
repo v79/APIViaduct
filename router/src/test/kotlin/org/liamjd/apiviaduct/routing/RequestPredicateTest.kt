@@ -12,7 +12,6 @@ class RequestPredicateTest {
             httpMethod = "GET"
         }
         val predicate = RequestPredicate("GET", "/test", setOf(), setOf())
-        println(predicate.match(testEvent))
         assert(predicate.match(testEvent).matches)
     }
 
@@ -35,7 +34,6 @@ class RequestPredicateTest {
             headers = mapOf("content-type" to "text/plain")
         }
         val predicate = RequestPredicate(method = "GET", pathPattern = "/test", consumes = setOf(MimeType.plainText), produces = setOf())
-        println(predicate.match(testEvent))
         assert(predicate.match(testEvent).matches)
     }
 }

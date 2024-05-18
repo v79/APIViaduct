@@ -12,7 +12,6 @@ abstract class LambdaRouter {
     open val corsDomain: String = "*"
     abstract val router: Router
     private val handler = LambdaRequestHandler()
-
 }
 
 internal class LambdaRequestHandler : RequestHandler<APIGatewayProxyRequestEvent, APIGatewayProxyResponseEvent> {

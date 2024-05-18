@@ -3,6 +3,7 @@ package org.liamjd.apiviaduct.routing
 import com.amazonaws.services.lambda.runtime.events.APIGatewayProxyRequestEvent
 import org.liamjd.apiviaduct.routing.extensions.acceptedMediaTypes
 import org.liamjd.apiviaduct.routing.extensions.contentType
+import java.util.*
 import kotlin.reflect.KType
 
 /**
@@ -69,7 +70,14 @@ internal data class RequestPredicate(
         }
     }
 
+    /**
+     * Simple check to see if the method matches
+     */
     private fun methodMatches(request: APIGatewayProxyRequestEvent) = method.equals(request.httpMethod, true)
+
+    /**
+     * Check if the request accepts the mime types the route produces
+     */
     private fun acceptMatches(request: APIGatewayProxyRequestEvent, produces: Set<MimeType>): Boolean {
         return when {
             produces.isEmpty() && request.acceptedMediaTypes().isEmpty() -> true
@@ -79,7 +87,13 @@ internal data class RequestPredicate(
         }
     }
 
-
+    override fun toString(): String {
+        val sB = StringBuilder()
+        sB.append(method.uppercase(Locale.getDefault())).append(" ")
+        sB.append(pathPattern).append("")
+        sB.append("[" + { consumes.joinToString(", ") } + "]->[" + produces.joinToString(", ") + "]")
+        return sB.toString()
+    }
 }
 
 /**

@@ -15,3 +15,13 @@ fun lambdaRouter(block: Router.() -> Unit): Router {
     router.block()
     return router
 }
+
+/**
+ * Shorthand for a function which responds to a [Request] and returns a [Response]
+ */
+internal typealias Handler<I, T> = (request: Request<I>) -> Response<T>
+
+// TODO: authorizer would be added here
+internal data class RouteFunction<I, T : Any>(
+    val requestPredicate: RequestPredicate, val handler: Handler<I, T>
+)
