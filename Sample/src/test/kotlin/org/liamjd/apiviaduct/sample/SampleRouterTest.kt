@@ -12,5 +12,6 @@ class SampleRouterTest {
     fun `test SampleRouter`() {
         val sampleRouter = SampleRouter
         assert(sampleRouter.corsDomain == "https://example.com")
+        assert(sampleRouter.router.routes.isNotEmpty())
     }
 }

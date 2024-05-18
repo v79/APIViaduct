@@ -16,7 +16,7 @@ import kotlin.reflect.KType
  * @property supplies is an alias for produces
  * @property kType is the Kotlin type of the request body, or null
  */
-internal data class RequestPredicate(
+data class RequestPredicate (
     val method: String, var pathPattern: String,
     internal var consumes: Set<MimeType>,
     internal var produces: Set<MimeType>
@@ -100,7 +100,7 @@ internal data class RequestPredicate(
  * Stores the results of the matching operation across path, method, and mime types
  * @property matches is true if all components are true
  */
-internal data class RequestMatchResult(
+data class RequestMatchResult internal constructor(
     val matchPath: Boolean = false,
     val matchMethod: Boolean = false,
     val matchAcceptType: Boolean = false,

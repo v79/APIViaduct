@@ -16,7 +16,7 @@ repositories {
 
 dependencies {
     // serialization
-    implementation("org.jetbrains.kotlinx:kotlinx-serialization-json:1.7.0-RC")
+    implementation("org.jetbrains.kotlinx:kotlinx-serialization-json:1.6.3")
     implementation("com.charleskorn.kaml:kaml:0.59.0")
 
     // aws sdk v2
