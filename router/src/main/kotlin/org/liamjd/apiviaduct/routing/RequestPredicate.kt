@@ -87,6 +87,9 @@ data class RequestPredicate (
         }
     }
 
+    fun matchedAcceptType(acceptedMediaTypes: List<MimeType>): MimeType? =
+        produces.firstOrNull { acceptedMediaTypes.any { acceptedType -> it.isCompatibleWith(acceptedType) } }
+
     override fun toString(): String {
         val sB = StringBuilder()
         sB.append(method.uppercase(Locale.getDefault())).append(" ")
