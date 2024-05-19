@@ -94,6 +94,29 @@ internal class RouterTest {
         assertEquals(response.headers["Allow"], "GET")
     }
 
+    // accepts and content type overrides
+    @Test
+    fun `returns correct response for GET request with overridden accept type`() {
+        val testRouter = TestRouter()
+        val response = testRouter.handleRequest(APIGatewayProxyRequestEvent().apply {
+            path = "/getText"
+            httpMethod = "GET"
+            headers = mapOf("accept" to "text/plain")
+        }, context)
+        assertEquals(200, response.statusCode)
+    }
+
+    @Test
+    fun `returns correct response for GET request with overridden content type`() {
+        val testRouter = TestRouter()
+        val response = testRouter.handleRequest(APIGatewayProxyRequestEvent().apply {
+            path = "/putText"
+            httpMethod = "PUT"
+            headers = mapOf("Content-Type" to "text/plain", "accept" to "application/json")
+        }, context)
+        assertEquals(200, response.statusCode)
+    }
+
 
     // This is a test context that can be used to test the LambdaRouter
     // The values don't matter, as long as they are not null
@@ -107,9 +130,11 @@ internal class RouterTest {
         override fun getIdentity(): CognitoIdentity {
             TODO("Not yet implemented")
         }
+
         override fun getClientContext(): ClientContext {
             TODO("Not yet implemented")
         }
+
         override fun getRemainingTimeInMillis() = 1000
         override fun getMemoryLimitInMB() = 512
         override fun getLogger(): LambdaLogger {
@@ -121,10 +146,15 @@ internal class RouterTest {
 internal class TestRouter : LambdaRouter() {
     override val corsDomain: String = "https://example.com"
     override val router = lambdaRouter {
+        // basic methods
         get("/test", handler = { _: Request<Unit> -> Response<String>(200) })
         patch("/patchTest", handler = { _: Request<Unit> -> Response<String>(200) })
         delete("/deleteTest", handler = { _: Request<Unit> -> Response<String>(200) })
         post("/postTest", handler = { _: Request<Unit> -> Response<String>(200) })
         put("/putTest", handler = { _: Request<Unit> -> Response<String>(200) })
+
+        // overriding the default consumes and produces
+        get("/getText", handler = { _: Request<Unit> -> Response<String>(200) }).supplies(setOf(MimeType.plainText))
+        put("/putText", handler = { _: Request<Unit> -> Response<String>(200) }).expects(setOf(MimeType.plainText))
     }
 }

@@ -16,7 +16,7 @@ import kotlin.reflect.KType
  * @property supplies is an alias for produces
  * @property kType is the Kotlin type of the request body, or null
  */
-data class RequestPredicate (
+data class RequestPredicate(
     val method: String, var pathPattern: String,
     internal var consumes: Set<MimeType>,
     internal var produces: Set<MimeType>
@@ -97,6 +97,46 @@ data class RequestPredicate (
         sB.append("[" + { consumes.joinToString(", ") } + "]->[" + produces.joinToString(", ") + "]")
         return sB.toString()
     }
+}
+
+/**
+ * Override the default consumes mime type
+ * @param mimeTypes a set of mime types to accept
+ */
+fun RequestPredicate.expects(mimeTypes: Set<MimeType>?): RequestPredicate {
+    mimeTypes?.let {
+        this.consumes = mimeTypes
+    }
+    return this
+}
+
+/**
+ * Override the default consumes mime type
+ * @param mimeType a single mime type to accept
+ */
+fun RequestPredicate.expects(mimeType: MimeType): RequestPredicate {
+    this.consumes = setOf(mimeType)
+    return this
+}
+
+/**
+ * Override the default produces mime type
+ * @param mimeTypes a set of mime types to produce
+ */
+fun RequestPredicate.supplies(mimeTypes: Set<MimeType>?): RequestPredicate {
+    mimeTypes?.let {
+        produces = mimeTypes
+    }
+    return this
+}
+
+/**
+ * Override the default produces mime type
+ * @param mimeType a single mime type to produce
+ */
+fun RequestPredicate.supplies(mimeType: MimeType): RequestPredicate {
+    produces = setOf(mimeType)
+    return this
 }
 
 /**

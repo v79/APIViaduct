@@ -30,7 +30,7 @@ abstract class LambdaRouter {
 /**
  * We don't want to expose the real handler function to users of the library
  */
-internal class LambdaRequestHandler() :
+internal class LambdaRequestHandler :
     RequestHandler<APIGatewayProxyRequestEvent, APIGatewayProxyResponseEvent> {
     lateinit var router: Router
 
@@ -43,6 +43,7 @@ internal class LambdaRequestHandler() :
             }->${input.acceptedMediaTypes()}>"
         )
         router.routes.entries.map { route: MutableMap.MutableEntry<RequestPredicate, RouteFunction<*, *>> ->
+            println("Checking route ${route.key.method} ${route.key.pathPattern}")
             // first, check if the request matches this route
             if (route.key.pathMatches(input.path)) {
                 // now check if the method matches
@@ -50,7 +51,7 @@ internal class LambdaRequestHandler() :
                     // now check if the accept and content types match
                     if (route.key.acceptMatches(input, route.key.produces)) {
                         // all good, process the route
-                        // TODO: Replace this with a processRoute function
+                        // TODO: Replace this with a processRoute function which needs to handle serialization
                         // and a createResponse function
                         val matchedAcceptType = route.key.matchedAcceptType(input.acceptedMediaTypes())
                             ?: router.produceByDefault.first()
@@ -64,19 +65,16 @@ internal class LambdaRequestHandler() :
                             )
                             .withBody("Matched route ${input.httpMethod} ${input.path} with ${input.acceptedMediaTypes()}")
                     } else {
-                        println("Accept type doesn't match")
-                        println("Route produces ${route.key.produces}")
-                        // Fall through. There is HTTP 406 Not Acceptable, but I'm not going to implement that yet
-                        println("Falling through")
+                        // accept doesn't match, return 406
+                        createNotAcceptableResponse(input.httpMethod, input.path, route.key.produces)
                     }
                 } else {
                     // method doesn't match, return 405
                     return createMethodNotAllowedResponse(input.httpMethod, input.path)
-
                 }
             }
         }
-        // else, move on to the next route
+        // we have exhausted all routes, return 404
         return createNoMatchingRouteResponse(input.httpMethod, input.path, input.acceptedMediaTypes())
     }
 
@@ -88,8 +86,9 @@ internal class LambdaRequestHandler() :
         path: String?,
         acceptedMediaTypes: List<MimeType>
     ): APIGatewayProxyResponseEvent {
-        println("No route match found for $httpMethod $path")
-        val possibleAlts = router.routes.filterKeys { it.pathPattern == path }.keys.map { "${it.method} ${it.pathPattern}" }
+        println("No route match found for $httpMethod $path $acceptedMediaTypes")
+        val possibleAlts =
+            router.routes.filterKeys { it.pathPattern == path }.keys.map { "${it.method} ${it.pathPattern} ${it.consumes}" }
         if (possibleAlts.isNotEmpty()) {
             println("Possible alternatives: $possibleAlts")
         }
@@ -112,6 +111,22 @@ internal class LambdaRequestHandler() :
         return APIGatewayProxyResponseEvent()
             .withStatusCode(405)
             .withHeaders(mapOf("Allow" to allowedMethods.joinToString(",")))
+    }
+
+    /**
+     * Return a 406 message with some useful details
+     */
+    private fun createNotAcceptableResponse(
+        httpMethod: String?,
+        path: String?,
+        wantedTypes: Set<MimeType>
+    ): APIGatewayProxyResponseEvent {
+        println("Route $httpMethod $path cannot provide requested content type ($wantedTypes)")
+        // get list of allowed methods for this path
+        val canProvide = router.routes.filterKeys { it.pathPattern == path }.keys.map { it.produces }
+        return APIGatewayProxyResponseEvent()
+            .withStatusCode(405)
+            .withHeaders(mapOf("Content-Type" to canProvide.joinToString(",")))
     }
 }
 
