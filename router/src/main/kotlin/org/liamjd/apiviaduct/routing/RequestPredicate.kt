@@ -21,7 +21,7 @@ data class RequestPredicate (
     internal var consumes: Set<MimeType>,
     internal var produces: Set<MimeType>
 ) {
-    private var kType: KType? = null
+    var kType: KType? = null
     val accepts
         get() = consumes
     val supplies
@@ -59,7 +59,7 @@ data class RequestPredicate (
      * @param inputPath the path to check
      * @return true if the path matches the pattern
      */
-    private fun pathMatches(inputPath: String): Boolean {
+    fun pathMatches(inputPath: String): Boolean {
         val inputParts = inputPath.split("/")
         val routeParts = pathPattern.split("/")
 
@@ -73,12 +73,12 @@ data class RequestPredicate (
     /**
      * Simple check to see if the method matches
      */
-    private fun methodMatches(request: APIGatewayProxyRequestEvent) = method.equals(request.httpMethod, true)
+    fun methodMatches(request: APIGatewayProxyRequestEvent) = method.equals(request.httpMethod, true)
 
     /**
      * Check if the request accepts the mime types the route produces
      */
-    private fun acceptMatches(request: APIGatewayProxyRequestEvent, produces: Set<MimeType>): Boolean {
+    fun acceptMatches(request: APIGatewayProxyRequestEvent, produces: Set<MimeType>): Boolean {
         return when {
             produces.isEmpty() && request.acceptedMediaTypes().isEmpty() -> true
             else -> produces.firstOrNull {

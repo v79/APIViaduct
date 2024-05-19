@@ -28,18 +28,3 @@ data class Request<I>(
     val headers: MutableMap<String, String> = if (apiRequest.headers != null) apiRequest.headers else mutableMapOf()
 }
 
-/**
- * Collection of useful HTTP status codes I'm likely to need
- */
-enum class HttpCodes(val code: Int, val message: String) {
-    OK(200, "OK"), CREATED(201, "Created"), ACCEPTED(202, "Accepted"), NO_CONTENT(204, "No Content"), BAD_REQUEST(
-        400,
-        "Bad Request"
-    ),
-    UNAUTHORIZED(401, "Unauthorized"), FORBIDDEN(403, "Forbidden"), NOT_FOUND(404, "Not Found"), METHOD_NOT_ALLOWED(
-        405,
-        "Method Not Allowed"
-    ),
-    CONFLICT(409, "Conflict"),
-    TEAPOT(418, "I'm a teapot"), SERVER_ERROR(500, "Internal Server Error"), NOT_IMPLEMENTED(501, "Not Implemented"),
-}

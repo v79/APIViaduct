@@ -36,4 +36,14 @@ class RequestPredicateTest {
         val predicate = RequestPredicate(method = "GET", pathPattern = "/test", consumes = setOf(MimeType.plainText), produces = setOf())
         assert(predicate.match(testEvent).matches)
     }
+
+    @Test
+    fun `match fails with incorrect method type`() {
+        val testEvent = APIGatewayProxyRequestEvent().apply {
+            path = "/test"
+            httpMethod = "POST"
+        }
+        val predicate = RequestPredicate("GET", "/test", setOf(), setOf())
+        assert(!predicate.match(testEvent).matches)
+    }
 }

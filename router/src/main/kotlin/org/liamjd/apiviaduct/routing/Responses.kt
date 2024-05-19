@@ -88,6 +88,19 @@ data class Response<T : Any>(
         }
 
         /**
+         * 405
+         * https://httpwg.org/specs/rfc9110.html#status.405
+         * The serer MUST generate an Allow header file containing a list of the target resource's currently supported methods.
+         */
+        inline fun <reified T : Any> methodNotAllowed(
+            body: T? = null,
+            headers: Map<String, String> = emptyMap()
+        ): Response<T> {
+            val tt: KType = typeOf<T>()
+            return Response(HttpCodes.METHOD_NOT_ALLOWED.code, body, headers).apply { kType = tt }
+        }
+
+        /**
          * 409
          */
         inline fun <reified T : Any> conflict(
@@ -121,4 +134,20 @@ data class Response<T : Any>(
             return Response(HttpCodes.NOT_IMPLEMENTED.code, body, headers).apply { kType = tt }
         }
     }
+}
+
+/**
+ * Collection of useful HTTP status codes I'm likely to need
+ */
+enum class HttpCodes(val code: Int, val message: String) {
+    OK(200, "OK"), CREATED(201, "Created"), ACCEPTED(202, "Accepted"), NO_CONTENT(204, "No Content"), BAD_REQUEST(
+        400,
+        "Bad Request"
+    ),
+    UNAUTHORIZED(401, "Unauthorized"), FORBIDDEN(403, "Forbidden"), NOT_FOUND(404, "Not Found"), METHOD_NOT_ALLOWED(
+        405,
+        "Method Not Allowed"
+    ),
+    CONFLICT(409, "Conflict"),
+    TEAPOT(418, "I'm a teapot"), SERVER_ERROR(500, "Internal Server Error"), NOT_IMPLEMENTED(501, "Not Implemented"),
 }

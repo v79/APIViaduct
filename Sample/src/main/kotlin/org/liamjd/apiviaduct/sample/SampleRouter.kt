@@ -10,6 +10,7 @@ import org.liamjd.apiviaduct.routing.lambdaRouter
  */
 class SampleRouter : LambdaRouter() {
     override val corsDomain: String = "https://example.com"
+
     override val router = lambdaRouter {
         get("/test", handler = { _: Request<Unit> -> Response<String>(200) })
     }
