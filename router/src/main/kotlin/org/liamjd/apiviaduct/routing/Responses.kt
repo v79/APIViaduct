@@ -101,6 +101,19 @@ data class Response<T : Any>(
         }
 
         /**
+         * 406
+         * https://httpwg.org/specs/rfc9110.html#status.405
+         * The server should generate a list of acceptable media types in the Content-Type header
+         */
+        inline fun <reified T : Any> notAcceptable(
+            body: T? = null,
+            headers: Map<String, String> = emptyMap()
+        ): Response<T> {
+            val tt: KType = typeOf<T>()
+            return Response(HttpCodes.NOT_ACCEPTABLE.code, body, headers).apply { kType = tt }
+        }
+
+        /**
          * 409
          */
         inline fun <reified T : Any> conflict(
@@ -148,6 +161,7 @@ enum class HttpCodes(val code: Int, val message: String) {
         405,
         "Method Not Allowed"
     ),
+    NOT_ACCEPTABLE(406, "Not Acceptable"),
     CONFLICT(409, "Conflict"),
     TEAPOT(418, "I'm a teapot"), SERVER_ERROR(500, "Internal Server Error"), NOT_IMPLEMENTED(501, "Not Implemented"),
 }

@@ -4,6 +4,7 @@ import com.amazonaws.services.lambda.runtime.Context
 import com.amazonaws.services.lambda.runtime.RequestHandler
 import com.amazonaws.services.lambda.runtime.events.APIGatewayProxyRequestEvent
 import com.amazonaws.services.lambda.runtime.events.APIGatewayProxyResponseEvent
+import org.liamjd.apiviaduct.routing.RouteProcessor.processRoute
 import org.liamjd.apiviaduct.routing.extensions.acceptedMediaTypes
 import org.liamjd.apiviaduct.routing.extensions.getHeader
 
@@ -42,6 +43,17 @@ internal class LambdaRequestHandler :
                 )
             }->${input.acceptedMediaTypes()}>"
         )
+        // TODO: Serialize the response instead
+        val response: Response<out Any> = validateRoute(input)
+
+        return APIGatewayProxyResponseEvent().apply {
+            statusCode = response.statusCode
+            headers = response.headers
+            body = response.body.toString() // TODO: Serialize the body properly!
+        }
+    }
+
+    private fun validateRoute(input: APIGatewayProxyRequestEvent): Response<out Any> {
         router.routes.entries.map { route: MutableMap.MutableEntry<RequestPredicate, RouteFunction<*, *>> ->
             println("Checking route ${route.key.method} ${route.key.pathPattern}")
             // first, check if the request matches this route
@@ -53,17 +65,7 @@ internal class LambdaRequestHandler :
                         // all good, process the route
                         // TODO: Replace this with a processRoute function which needs to handle serialization
                         // and a createResponse function
-                        val matchedAcceptType = route.key.matchedAcceptType(input.acceptedMediaTypes())
-                            ?: router.produceByDefault.first()
-                        return APIGatewayProxyResponseEvent()
-                            .withStatusCode(200)
-                            .withHeaders(
-                                mapOf(
-                                    "Content-Type" to matchedAcceptType.toString(),
-                                    "Access-Control-Allow-Origin" to "*"
-                                )
-                            )
-                            .withBody("Matched route ${input.httpMethod} ${input.path} with ${input.acceptedMediaTypes()}")
+                        return processRoute(input, route.value)
                     } else {
                         // accept doesn't match, return 406
                         return createNotAcceptableResponse(input.httpMethod, input.path, route.key.produces)
@@ -78,6 +80,15 @@ internal class LambdaRequestHandler :
         return createNoMatchingRouteResponse(input.httpMethod, input.path, input.acceptedMediaTypes())
     }
 
+
+    private fun serializeResponse(response: Response<out Any>): APIGatewayProxyResponseEvent {
+        return APIGatewayProxyResponseEvent().apply {
+            statusCode = response.statusCode
+            headers = response.headers
+            body = response.body.toString() // TODO: Serialize the body properly!
+        }
+    }
+
     /**
      * Return a 404 message with some useful details
      */
@@ -85,17 +96,17 @@ internal class LambdaRequestHandler :
         httpMethod: String?,
         path: String?,
         acceptedMediaTypes: List<MimeType>
-    ): APIGatewayProxyResponseEvent {
+    ): Response<String> {
         println("No route match found for $httpMethod $path $acceptedMediaTypes")
         val possibleAlts =
             router.routes.filterKeys { it.pathPattern == path }.keys.map { "${it.method} ${it.pathPattern} ${it.consumes}" }
         if (possibleAlts.isNotEmpty()) {
             println("Possible alternatives: $possibleAlts")
         }
-        return APIGatewayProxyResponseEvent()
-            .withStatusCode(404)
-            .withHeaders(mapOf("Content-Type" to "text/plain"))
-            .withBody("No match found for route '$httpMethod' '$path' which accepts $acceptedMediaTypes")
+        return Response.notFound(
+            body = "No match found for route '$httpMethod' '$path' which accepts $acceptedMediaTypes",
+            headers = mapOf("Content-Type" to "text/plain")
+        )
     }
 
     /**
@@ -104,13 +115,11 @@ internal class LambdaRequestHandler :
     private fun createMethodNotAllowedResponse(
         httpMethod: String?,
         path: String?
-    ): APIGatewayProxyResponseEvent {
+    ): Response<String> {
         println("Method not allowed for $httpMethod $path")
         // get list of allowed methods for this path
         val allowedMethods = router.routes.filterKeys { it.pathPattern == path }.keys.map { it.method }
-        return APIGatewayProxyResponseEvent()
-            .withStatusCode(405)
-            .withHeaders(mapOf("Allow" to allowedMethods.joinToString(",")))
+        return Response.methodNotAllowed(headers = mapOf("Allow" to allowedMethods.joinToString(",")))
     }
 
     /**
@@ -120,13 +129,11 @@ internal class LambdaRequestHandler :
         httpMethod: String?,
         path: String?,
         wantedTypes: Set<MimeType>
-    ): APIGatewayProxyResponseEvent {
+    ): Response<String> {
         println("Route $httpMethod $path cannot provide requested content type ($wantedTypes)")
         // get list of allowed methods for this path
         val canProvide = router.routes.filterKeys { it.pathPattern == path }.keys.map { it.produces }
-        return APIGatewayProxyResponseEvent()
-            .withStatusCode(406)
-            .withHeaders(mapOf("Content-Type" to canProvide.joinToString(",")))
+        return Response.notAcceptable(headers = mapOf("Content-Type" to canProvide.joinToString(",")))
     }
 }
 
