@@ -14,7 +14,7 @@ data class Request<I>(
     val apiRequest: APIGatewayProxyRequestEvent, val body: I, val pathPattern: String
 ) {
     // TODO: Ideally, this should be Map<String, Any> but I can't figure out how to do that
-    private val pathParameters: Map<String, String> by lazy {
+    internal val pathParameters: Map<String, String> by lazy {
         buildMap {
             val inputParts = apiRequest.path.split("/")
             val routeParts = pathPattern.split("/")
