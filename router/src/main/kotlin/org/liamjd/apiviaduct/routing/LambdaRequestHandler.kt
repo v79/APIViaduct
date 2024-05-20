@@ -66,7 +66,7 @@ internal class LambdaRequestHandler :
                             .withBody("Matched route ${input.httpMethod} ${input.path} with ${input.acceptedMediaTypes()}")
                     } else {
                         // accept doesn't match, return 406
-                        createNotAcceptableResponse(input.httpMethod, input.path, route.key.produces)
+                        return createNotAcceptableResponse(input.httpMethod, input.path, route.key.produces)
                     }
                 } else {
                     // method doesn't match, return 405
@@ -125,7 +125,7 @@ internal class LambdaRequestHandler :
         // get list of allowed methods for this path
         val canProvide = router.routes.filterKeys { it.pathPattern == path }.keys.map { it.produces }
         return APIGatewayProxyResponseEvent()
-            .withStatusCode(405)
+            .withStatusCode(406)
             .withHeaders(mapOf("Content-Type" to canProvide.joinToString(",")))
     }
 }

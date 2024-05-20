@@ -117,6 +117,17 @@ internal class RouterTest {
         assertEquals(200, response.statusCode)
     }
 
+    @Test
+    fun `returns 406 for GET request with overridden accept type that doesn't match`() {
+        val testRouter = TestRouter()
+        val response = testRouter.handleRequest(APIGatewayProxyRequestEvent().apply {
+            path = "/putText"
+            httpMethod = "PUT"
+            headers = mapOf("Content-Type" to "text/plain", "accept" to "text/plain")
+        }, context)
+        assertEquals(406, response.statusCode)
+    }
+
 
     // This is a test context that can be used to test the LambdaRouter
     // The values don't matter, as long as they are not null
