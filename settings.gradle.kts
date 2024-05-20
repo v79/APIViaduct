@@ -3,4 +3,4 @@ plugins {
 }
 rootProject.name = "APIViaduct"
 include("router")
-include("router")
+include("Sample")
