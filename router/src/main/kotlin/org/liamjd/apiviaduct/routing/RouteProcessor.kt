@@ -84,7 +84,7 @@ object RouteProcessor {
             else -> {
                 // HEAD, OPTIONS, TRACE, CONNECT, and any other method
                 // we don't support these methods
-                return Response.methodNotAllowed(body = "Method ${input.httpMethod} not supported for path ${input.path}")
+                return Response.methodNotAllowed(body = "Method ${input.httpMethod} not supported for path ${handlerFunction.predicate.pathPattern}")
             }
         }
     }
