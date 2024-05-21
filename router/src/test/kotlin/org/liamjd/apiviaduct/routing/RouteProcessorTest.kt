@@ -93,6 +93,51 @@ class RouteProcessorTest {
         assertEquals("test", (response.body as SimpleObject).name)
         assertEquals(42, (response.body as SimpleObject).age)
     }
+
+    @Test
+    fun `returns bad request when json string is missing a field`() {
+        val input = APIGatewayProxyRequestEvent().apply {
+            httpMethod = "PUT"
+            body = """{"name":"test"}"""
+            headers = mapOf("Content-Type" to "application/json")
+        }
+        val handlerFunction: RouteFunction<SimpleObject, SimpleObject> = RouteFunction(
+            predicate = RequestPredicate(
+                method = "PUT",
+                pathPattern = "/test",
+                produces = setOf(MimeType.json),
+                consumes = setOf(MimeType.json)
+            ),
+            handler = { request: Request<SimpleObject> -> Response.ok(request.body) }
+        )
+        handlerFunction.predicate.kType = typeOf<SimpleObject>()
+        val response = RouteProcessor.processRoute(input, handlerFunction)
+        assertEquals(400, response.statusCode)
+        assert((response.body as String).startsWith("Invalid request"))
+    }
+
+    @Test
+    fun `returns bad request when json is invalid`() {
+        val input = APIGatewayProxyRequestEvent().apply {
+            httpMethod = "PUT"
+            body = """wibble"""
+            headers = mapOf("Content-Type" to "application/json")
+        }
+        val handlerFunction: RouteFunction<SimpleObject, SimpleObject> = RouteFunction(
+            predicate = RequestPredicate(
+                method = "PUT",
+                pathPattern = "/test",
+                produces = setOf(MimeType.json),
+                consumes = setOf(MimeType.json)
+            ),
+            handler = { request: Request<SimpleObject> -> Response.ok(request.body) }
+        )
+        handlerFunction.predicate.kType = typeOf<SimpleObject>()
+        val response = RouteProcessor.processRoute(input, handlerFunction)
+        assertEquals(400, response.statusCode)
+        assert((response.body as String).startsWith("Could not deserialize body."))
+
+    }
 }
 
 @Serializable

@@ -5,6 +5,7 @@ import com.amazonaws.services.lambda.runtime.CognitoIdentity
 import com.amazonaws.services.lambda.runtime.Context
 import com.amazonaws.services.lambda.runtime.LambdaLogger
 import com.amazonaws.services.lambda.runtime.events.APIGatewayProxyRequestEvent
+import kotlinx.serialization.Serializable
 import kotlin.test.Test
 import kotlin.test.assertEquals
 
@@ -128,6 +129,19 @@ internal class RouterTest {
         assertEquals(406, response.statusCode)
     }
 
+    // serialization and deserialization
+    @Test
+    fun `returns correct response for POST request with object body`() {
+        val testRouter = TestRouter()
+        val response = testRouter.handleRequest(APIGatewayProxyRequestEvent().apply {
+            path = "/postObj"
+            httpMethod = "POST"
+            body = """{"name":"Christopher","age":42}"""
+            headers = mapOf("Content-Type" to "application/json", "accept" to "application/json")
+        }, context)
+        assertEquals(200, response.statusCode)
+        assertEquals("""{"happy":true,"favouriteColor":"Christopher's favourite colour is blue"}""", response.body)
+    }
 
     // This is a test context that can be used to test the LambdaRouter
     // The values don't matter, as long as they are not null
@@ -167,5 +181,23 @@ internal class TestRouter : LambdaRouter() {
         // overriding the default consumes and produces
         get("/getText", handler = { _: Request<Unit> -> Response<String>(200) }).supplies(setOf(MimeType.plainText))
         put("/putText", handler = { _: Request<Unit> -> Response<String>(200) }).expects(setOf(MimeType.plainText))
+
+        // serialization and deserialization
+        post(
+            "/postObj",
+            handler = { request: Request<ReqObj> ->
+                Response.ok(
+                    RespObj(
+                        true,
+                        "${request.body.name}'s favourite colour is blue"
+                    )
+                )
+            })
     }
 }
+
+@Serializable
+internal class ReqObj(val name: String, val age: Int)
+
+@Serializable
+internal class RespObj(val happy: Boolean, val favouriteColor: String)
