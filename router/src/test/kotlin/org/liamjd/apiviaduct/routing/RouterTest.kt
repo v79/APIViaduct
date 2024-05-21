@@ -143,6 +143,33 @@ internal class RouterTest {
         assertEquals("""{"happy":true,"favouriteColor":"Christopher's favourite colour is blue"}""", response.body)
     }
 
+    @Test
+    fun `returns a yaml response for POST request with object body and yaml accept type`() {
+        val testRouter = TestRouter()
+        val response = testRouter.handleRequest(APIGatewayProxyRequestEvent().apply {
+            path = "/giveMeYaml"
+            httpMethod = "POST"
+            body = """{"name":"Christopher","age":42}"""
+            headers = mapOf("Content-Type" to "application/json","accept" to "application/yaml")
+        }, context)
+        assertEquals(200, response.statusCode)
+        assertEquals("happy: false\nfavouriteColor: \"Christopher's favourite colour is blue\"", response.body)
+    }
+
+    @Test
+    fun `returns 400 for POST when body cannot be serialized according to content type`() {
+        val testRouter = TestRouter()
+        // in this test we are sending Yaml data with a JSON content type
+        // not that the other way around is successfully handled and returns a 200
+        val response = testRouter.handleRequest(APIGatewayProxyRequestEvent().apply {
+            path = "/giveMeYaml"
+            httpMethod = "POST"
+            body = """name: Christoper\nage: 42"""
+            headers = mapOf("Content-Type" to "application/json","accept" to "application/yaml")
+        }, context)
+        assertEquals(400, response.statusCode)
+    }
+
     // This is a test context that can be used to test the LambdaRouter
     // The values don't matter, as long as they are not null
     class TestContext : Context {
@@ -193,6 +220,17 @@ internal class TestRouter : LambdaRouter() {
                     )
                 )
             })
+
+        post(
+            "/giveMeYaml",
+            handler = { request: Request<ReqObj> ->
+                Response.ok(
+                    RespObj(
+                        false,
+                        "${request.body.name}'s favourite colour is blue"
+                    )
+                )
+            }).supplies(MimeType.yaml).expects(MimeType.json)
     }
 }
 

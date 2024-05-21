@@ -10,6 +10,7 @@ import kotlinx.serialization.serializer
 import org.liamjd.apiviaduct.routing.RouteProcessor.processRoute
 import org.liamjd.apiviaduct.routing.extensions.acceptedMediaTypes
 import org.liamjd.apiviaduct.routing.extensions.getHeader
+import kotlin.reflect.typeOf
 
 /**
  * Base class for creating a Lambda router. Your project should create an object that extends this class
@@ -35,7 +36,7 @@ abstract class LambdaRouter {
 /**
  * We don't want to expose the real handler function to users of the library
  */
-internal class LambdaRequestHandler() :
+internal class LambdaRequestHandler :
     RequestHandler<APIGatewayProxyRequestEvent, APIGatewayProxyResponseEvent> {
     lateinit var router: Router
     var corsDomain: String = "*"
@@ -101,30 +102,35 @@ internal class LambdaRequestHandler() :
         mimeType: MimeType,
         corsDomain: String
     ): APIGatewayProxyResponseEvent {
-        val bodyString: String = when (mimeType) {
-            MimeType.json -> {
-                val jsonFormat = Json { prettyPrint = false; encodeDefaults = true }
-                response.kType?.let { kType ->
-                    val kSerializer = serializer(kType)
-                    kSerializer.let {
-                        jsonFormat.encodeToString(kSerializer, response.body)
-                    }
-                } ?: """{ "error" : "could not get json serializer for $response" }"""
-            }
+        // what if the response is an error and I can't return the requested object?
+       val responseString =  when(response.statusCode) {
+           in 200..299 -> {
+               val bodyString: String = when (mimeType) {
+                   MimeType.json -> {
+                       val jsonFormat = Json { prettyPrint = false; encodeDefaults = true }
+                       response.kType?.let { kType ->
+                           val kSerializer = serializer(kType)
+                           kSerializer.let {
+                               jsonFormat.encodeToString(kSerializer, response.body)
+                           }
+                       } ?: """{ "error" : "could not get json serializer for $response" }"""
+                   }
 
-            MimeType.yaml -> {
-                response.kType?.let { kType ->
-                    val kSerializer = serializer(kType)
-                    Yaml.default.encodeToString(kSerializer, response.body)
-                } ?: "error: could not get yaml serializer for $response"
-            }
+                   MimeType.yaml -> {
+                       response.kType?.let { kType ->
+                           val kSerializer = serializer(kType)
+                           kSerializer.let {
+                               Yaml.default.encodeToString(kSerializer, response.body)
+                           }
+                       } ?: "error: could not get yaml serializer for $response"
+                   }
 
-            MimeType.plainText -> {
-                response.body.toString()
-            }
+                   MimeType.plainText -> {
+                       response.body.toString()
+                   }
 
-            MimeType.html -> {
-                """
+                   MimeType.html -> {
+                       """
                     <html>
                     <head>
                     <title>${response.statusCode}</title>
@@ -135,22 +141,37 @@ internal class LambdaRequestHandler() :
                     </body>
                     </html>
                 """.trimIndent()
-            }
+                   }
 
-            MimeType.xml -> {
-                """
+                   MimeType.xml -> {
+                       """
                     <?xml version="1.0" encoding="UTF-8"?>
                     <response>
                     <status>${response.statusCode}</status>
                     <body>${response.body.toString()}</body>
                     </response>
                 """.trimIndent()
-            }
+                   }
 
-            else -> {
-                response.body.toString()
-            }
-        }
+                   else -> {
+                       response.body.toString()
+                   }
+               }
+               bodyString
+           }
+           in 300..399 -> {
+               response.kType = typeOf<String>()
+               response.body.toString()
+           }
+           in 400..499 -> {
+               response.kType = typeOf<String>()
+               response.body.toString()
+           }
+           else -> {
+               response.kType = typeOf<String>()
+               response.body.toString()
+           }
+       }
 
 
         return APIGatewayProxyResponseEvent().apply {
@@ -159,7 +180,7 @@ internal class LambdaRequestHandler() :
                 "Content-Type" to mimeType.toString(),
                 "Access-Control-Allow-Origin" to corsDomain
             )
-            body = bodyString
+            body = responseString
         }
     }
 
@@ -179,7 +200,7 @@ internal class LambdaRequestHandler() :
         }
         return Response.notFound(
             body = "No match found for route '$httpMethod' '$path' which accepts $acceptedMediaTypes",
-            headers = mapOf("Content-Type" to "text/plain")
+            headers = mapOf("Content-Type" to MimeType.plainText.toString())
         )
     }
 
@@ -193,7 +214,13 @@ internal class LambdaRequestHandler() :
         println("Method not allowed for $httpMethod $path")
         // get list of allowed methods for this path
         val allowedMethods = router.routes.filterKeys { it.pathPattern == path }.keys.map { it.method }
-        return Response.methodNotAllowed(body = "", headers = mapOf("Allow" to allowedMethods.joinToString(",")))
+        return Response.methodNotAllowed(
+            body = "",
+            headers = mapOf(
+                "Content-Type" to MimeType.plainText.toString(),
+                "Allow" to allowedMethods.joinToString(",")
+            )
+        )
     }
 
     /**
@@ -207,7 +234,7 @@ internal class LambdaRequestHandler() :
         println("Route $httpMethod $path cannot provide requested content type ($wantedTypes)")
         // get list of allowed methods for this path
         val canProvide = router.routes.filterKeys { it.pathPattern == path }.keys.map { it.produces }
-        return Response.notAcceptable(headers = mapOf("Content-Type" to canProvide.joinToString(",")))
+        return Response.notAcceptable(body = "", headers = mapOf("Content-Type" to canProvide.joinToString(",")))
     }
 }
 

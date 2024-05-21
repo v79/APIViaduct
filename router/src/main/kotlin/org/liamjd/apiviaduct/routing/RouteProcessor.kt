@@ -2,6 +2,7 @@ package org.liamjd.apiviaduct.routing
 
 import com.amazonaws.services.lambda.runtime.events.APIGatewayProxyRequestEvent
 import com.charleskorn.kaml.Yaml
+import kotlinx.serialization.ExperimentalSerializationApi
 import kotlinx.serialization.MissingFieldException
 import kotlinx.serialization.SerializationException
 import kotlinx.serialization.json.Json
@@ -21,6 +22,7 @@ object RouteProcessor {
      * @param handlerFunction the function to invoke
      * @return a Response<Any> object
      */
+    @OptIn(ExperimentalSerializationApi::class)
     fun processRoute(
         input: APIGatewayProxyRequestEvent,
         handlerFunction: RouteFunction<*, *>
@@ -41,7 +43,7 @@ object RouteProcessor {
                 } else {
                     return try {
                         val contentType = input.getHeader("Content-Type")
-                        println("Processing route: input content type was $contentType. Deserializing...")
+                        println("Processing route: Converting $contentType to ${kType}. Deserializing...")
                         val bodyObject = if (contentType != null) when (MimeType.parse(contentType)) {
                             MimeType.json -> {
                                 Json.decodeFromString(serializer(kType), input.body)
