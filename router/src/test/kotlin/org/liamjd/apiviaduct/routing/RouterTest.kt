@@ -95,6 +95,18 @@ internal class RouterTest {
         assertEquals(response.headers["Allow"], "GET")
     }
 
+    @Test
+    fun `not implemented 500 response will have empty body`() {
+        val testRouter = TestRouter()
+        val response = testRouter.handleRequest(APIGatewayProxyRequestEvent().apply {
+            path = "/notImplemented"
+            httpMethod = "GET"
+            headers = mapOf("accept" to "application/json")
+        }, context)
+        assertEquals(501, response.statusCode)
+        assertEquals("",response.body)
+    }
+
     // accepts and content type overrides
     @Test
     fun `returns correct response for GET request with overridden accept type`() {
@@ -199,15 +211,15 @@ internal class TestRouter : LambdaRouter() {
     override val corsDomain: String = "https://example.com"
     override val router = lambdaRouter {
         // basic methods
-        get("/test", handler = { _: Request<Unit> -> Response<String>(200) })
-        patch("/patchTest", handler = { _: Request<Unit> -> Response<String>(200) })
-        delete("/deleteTest", handler = { _: Request<Unit> -> Response<String>(200) })
-        post("/postTest", handler = { _: Request<Unit> -> Response<String>(200) })
-        put("/putTest", handler = { _: Request<Unit> -> Response<String>(200) })
-
+        get("/test", handler = { _: Request<Unit> -> Response.ok() })
+        patch("/patchTest", handler = { _: Request<Unit> -> Response.ok() })
+        delete("/deleteTest", handler = { _: Request<Unit> -> Response.ok() })
+        post("/postTest", handler = { _: Request<Unit> -> Response.ok() })
+        put("/putTest", handler = { _: Request<Unit> -> Response.ok() })
+        get("/notImplemented", handler = { _: Request<Unit> -> Response.notImplemented() })
         // overriding the default consumes and produces
-        get("/getText", handler = { _: Request<Unit> -> Response<String>(200) }).supplies(setOf(MimeType.plainText))
-        put("/putText", handler = { _: Request<Unit> -> Response<String>(200) }).expects(setOf(MimeType.plainText))
+        get("/getText", handler = { _: Request<Unit> -> Response.ok() }).supplies(setOf(MimeType.plainText))
+        put("/putText", handler = { _: Request<Unit> -> Response.ok() }).expects(setOf(MimeType.plainText))
 
         // serialization and deserialization
         post(

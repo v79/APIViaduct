@@ -162,6 +162,6 @@ enum class HttpCodes(val code: Int, val message: String) {
         "Method Not Allowed"
     ),
     NOT_ACCEPTABLE(406, "Not Acceptable"),
-    CONFLICT(409, "Conflict"),
+    CONFLICT(409, "Conflict"),LENGTH_REQUIRED(411, "Length Required"),
     TEAPOT(418, "I'm a teapot"), SERVER_ERROR(500, "Internal Server Error"), NOT_IMPLEMENTED(501, "Not Implemented"),
 }

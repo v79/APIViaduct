@@ -105,32 +105,33 @@ internal class LambdaRequestHandler :
         // what if the response is an error and I can't return the requested object?
        val responseString =  when(response.statusCode) {
            in 200..299 -> {
-               val bodyString: String = when (mimeType) {
-                   MimeType.json -> {
-                       val jsonFormat = Json { prettyPrint = false; encodeDefaults = true }
-                       response.kType?.let { kType ->
-                           val kSerializer = serializer(kType)
-                           kSerializer.let {
-                               jsonFormat.encodeToString(kSerializer, response.body)
-                           }
-                       } ?: """{ "error" : "could not get json serializer for $response" }"""
-                   }
+               if(response.body != null) {
+                   val bodyString: String = when (mimeType) {
+                       MimeType.json -> {
+                           val jsonFormat = Json { prettyPrint = false; encodeDefaults = true }
+                           response.kType?.let { kType ->
+                               val kSerializer = serializer(kType)
+                               kSerializer.let {
+                                   jsonFormat.encodeToString(kSerializer, response.body)
+                               }
+                           } ?: """{ "error" : "could not get json serializer for $response" }"""
+                       }
 
-                   MimeType.yaml -> {
-                       response.kType?.let { kType ->
-                           val kSerializer = serializer(kType)
-                           kSerializer.let {
-                               Yaml.default.encodeToString(kSerializer, response.body)
-                           }
-                       } ?: "error: could not get yaml serializer for $response"
-                   }
+                       MimeType.yaml -> {
+                           response.kType?.let { kType ->
+                               val kSerializer = serializer(kType)
+                               kSerializer.let {
+                                   Yaml.default.encodeToString(kSerializer, response.body)
+                               }
+                           } ?: "error: could not get yaml serializer for $response"
+                       }
 
-                   MimeType.plainText -> {
-                       response.body.toString()
-                   }
+                       MimeType.plainText -> {
+                           response.body.toString()
+                       }
 
-                   MimeType.html -> {
-                       """
+                       MimeType.html -> {
+                           """
                     <html>
                     <head>
                     <title>${response.statusCode}</title>
@@ -141,35 +142,40 @@ internal class LambdaRequestHandler :
                     </body>
                     </html>
                 """.trimIndent()
-                   }
+                       }
 
-                   MimeType.xml -> {
-                       """
+                       MimeType.xml -> {
+                           """
                     <?xml version="1.0" encoding="UTF-8"?>
                     <response>
                     <status>${response.statusCode}</status>
                     <body>${response.body.toString()}</body>
                     </response>
                 """.trimIndent()
-                   }
+                       }
 
-                   else -> {
-                       response.body.toString()
+                       else -> {
+                           response.body.toString()
+                       }
                    }
+                   bodyString
+               } else {
+                   // return empty string for null body
+                   // do I need to sanity check this?
+                   ""
                }
-               bodyString
            }
            in 300..399 -> {
                response.kType = typeOf<String>()
-               response.body.toString()
+               response.body?.toString() ?: ""
            }
            in 400..499 -> {
                response.kType = typeOf<String>()
-               response.body.toString()
+               response.body?.toString() ?: ""
            }
            else -> {
                response.kType = typeOf<String>()
-               response.body.toString()
+               response.body?.toString() ?: ""
            }
        }
 
