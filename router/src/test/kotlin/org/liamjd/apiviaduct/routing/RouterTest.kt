@@ -16,25 +16,25 @@ internal class RouterTest {
     @Test
     fun `basic test of router`() {
         val testRouter = TestRouter()
-        testRouter.handleRequest(APIGatewayProxyRequestEvent().apply {
+        val response = testRouter.handleRequest(APIGatewayProxyRequestEvent().apply {
             path = "/test"
             httpMethod = "GET"
             headers = mapOf("accept" to "application/json")
-        }, context).apply {
-            assert(statusCode == 200)
-        }
+        }, context)
+        assert(response.statusCode == 200)
+        assertEquals("application/json", response.headers["Content-Type"])
+        assertEquals("https://example.com", response.headers["Access-Control-Allow-Origin"])
     }
 
     @Test
     fun `returns a 404 for a route that doesn't exist`() {
         val testRouter = TestRouter()
-        testRouter.handleRequest(APIGatewayProxyRequestEvent().apply {
+        val response = testRouter.handleRequest(APIGatewayProxyRequestEvent().apply {
             path = "/notfound"
             httpMethod = "GET"
             headers = mapOf("accept" to "application/json")
-        }, context).apply {
-            assert(statusCode == 404)
-        }
+        }, context)
+        assert(response.statusCode == 404)
     }
 
     @Test
@@ -104,7 +104,7 @@ internal class RouterTest {
             headers = mapOf("accept" to "application/json")
         }, context)
         assertEquals(501, response.statusCode)
-        assertEquals("",response.body)
+        assertEquals("", response.body)
     }
 
     // accepts and content type overrides
@@ -162,7 +162,7 @@ internal class RouterTest {
             path = "/giveMeYaml"
             httpMethod = "POST"
             body = """{"name":"Christopher","age":42}"""
-            headers = mapOf("Content-Type" to "application/json","accept" to "application/yaml")
+            headers = mapOf("Content-Type" to "application/json", "accept" to "application/yaml")
         }, context)
         assertEquals(200, response.statusCode)
         assertEquals("happy: false\nfavouriteColor: \"Christopher's favourite colour is blue\"", response.body)
@@ -177,9 +177,10 @@ internal class RouterTest {
             path = "/giveMeYaml"
             httpMethod = "POST"
             body = """name: Christoper\nage: 42"""
-            headers = mapOf("Content-Type" to "application/json","accept" to "application/yaml")
+            headers = mapOf("Content-Type" to "application/json", "accept" to "application/yaml")
         }, context)
         assertEquals(400, response.statusCode)
+        assert(response.body.startsWith("Could not deserialize body"))
     }
 
     // This is a test context that can be used to test the LambdaRouter

@@ -107,6 +107,7 @@ internal class LambdaRequestHandler :
            in 200..299 -> {
                if(response.body != null) {
                    val bodyString: String = when (mimeType) {
+
                        MimeType.json -> {
                            val jsonFormat = Json { prettyPrint = false; encodeDefaults = true }
                            response.kType?.let { kType ->
@@ -138,7 +139,7 @@ internal class LambdaRequestHandler :
                     </head>
                     <body>
                     <h1>${response.statusCode}</h1>
-                    <p>${response.body.toString()}</p>
+                    <p>${response.body}</p>
                     </body>
                     </html>
                 """.trimIndent()
@@ -149,7 +150,7 @@ internal class LambdaRequestHandler :
                     <?xml version="1.0" encoding="UTF-8"?>
                     <response>
                     <status>${response.statusCode}</status>
-                    <body>${response.body.toString()}</body>
+                    <body>${response.body}</body>
                     </response>
                 """.trimIndent()
                        }
