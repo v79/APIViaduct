@@ -12,6 +12,8 @@ class Router internal constructor() {
     val produceByDefault = setOf(MimeType.json)
 
     private val groups = mutableSetOf<Group>()
+    val groupPaths: Set<String>
+        get() = groups.map { it.parentPath }.toSet()
 
     /**
      * HTTP GET
