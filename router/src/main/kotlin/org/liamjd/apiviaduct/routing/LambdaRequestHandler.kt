@@ -62,27 +62,29 @@ internal class LambdaRequestHandler :
      * @return a Response<Any> object, which may be an error response
      */
     private fun validateRoute(input: APIGatewayProxyRequestEvent): Response<out Any> {
-        router.routes.entries.map { route: MutableMap.MutableEntry<RequestPredicate, RouteFunction<*, *>> ->
+        var routeFound = false
+        // find all the routes which match the path
+        router.routes.filterKeys { it.pathPattern == input.path }.entries.forEach { route ->
+            routeFound = true
             println("Checking route ${route.key.method} ${route.key.pathPattern}")
-            // first, check if the request matches this route
-            if (route.key.pathMatches(input.path)) {
-                // now check if the method matches
-                return if (route.key.methodMatches(input)) {
-                    // now check if the accept and content types match
-                    if (route.key.acceptMatches(input, route.key.produces)) {
-                        // all good, process the route
-                        // TODO: Add Authentication here
-                        // TODO: Add filters here?
-                        processRoute(input, route.value)
-                    } else {
-                        // accept doesn't match, return 406
-                        createNotAcceptableResponse(input.httpMethod, input.path, route.key.produces)
-                    }
+            // now check if the method matches
+            if (route.key.methodMatches(input)) {
+                // now check if the accept and content types match
+                if (route.key.acceptMatches(input, route.key.produces)) {
+                    // all good, process the route
+                    // TODO: Add Authentication here
+                    // TODO: Add filters here?
+                    return processRoute(input, route.value)
                 } else {
-                    // method doesn't match, return 405
-                    createMethodNotAllowedResponse(input.httpMethod, input.path)
+                    // accept doesn't match, return 406
+                    println("Route $input.path cannot provide requested content type (${input.acceptedMediaTypes()})")
+                    return createNotAcceptableResponse(input.httpMethod, input.path, route.key.produces)
                 }
             }
+        }
+        // I want to 405 if the route exists but the method is wrong
+        if (routeFound) {
+            return createMethodNotAllowedResponse(input.httpMethod, input.path)
         }
         // we have exhausted all routes, return 404
         return createNoMatchingRouteResponse(input.httpMethod, input.path, input.acceptedMediaTypes())
@@ -103,36 +105,36 @@ internal class LambdaRequestHandler :
         corsDomain: String
     ): APIGatewayProxyResponseEvent {
         // what if the response is an error and I can't return the requested object?
-       val responseString =  when(response.statusCode) {
-           in 200..299 -> {
-               if(response.body != null) {
-                   val bodyString: String = when (mimeType) {
+        val responseString = when (response.statusCode) {
+            in 200..299 -> {
+                if (response.body != null) {
+                    val bodyString: String = when (mimeType) {
 
-                       MimeType.json -> {
-                           val jsonFormat = Json { prettyPrint = false; encodeDefaults = true }
-                           response.kType?.let { kType ->
-                               val kSerializer = serializer(kType)
-                               kSerializer.let {
-                                   jsonFormat.encodeToString(kSerializer, response.body)
-                               }
-                           } ?: """{ "error" : "could not get json serializer for $response" }"""
-                       }
+                        MimeType.json -> {
+                            val jsonFormat = Json { prettyPrint = false; encodeDefaults = true }
+                            response.kType?.let { kType ->
+                                val kSerializer = serializer(kType)
+                                kSerializer.let {
+                                    jsonFormat.encodeToString(kSerializer, response.body)
+                                }
+                            } ?: """{ "error" : "could not get json serializer for $response" }"""
+                        }
 
-                       MimeType.yaml -> {
-                           response.kType?.let { kType ->
-                               val kSerializer = serializer(kType)
-                               kSerializer.let {
-                                   Yaml.default.encodeToString(kSerializer, response.body)
-                               }
-                           } ?: "error: could not get yaml serializer for $response"
-                       }
+                        MimeType.yaml -> {
+                            response.kType?.let { kType ->
+                                val kSerializer = serializer(kType)
+                                kSerializer.let {
+                                    Yaml.default.encodeToString(kSerializer, response.body)
+                                }
+                            } ?: "error: could not get yaml serializer for $response"
+                        }
 
-                       MimeType.plainText -> {
-                           response.body.toString()
-                       }
+                        MimeType.plainText -> {
+                            response.body.toString()
+                        }
 
-                       MimeType.html -> {
-                           """
+                        MimeType.html -> {
+                            """
                     <html>
                     <head>
                     <title>${response.statusCode}</title>
@@ -143,42 +145,45 @@ internal class LambdaRequestHandler :
                     </body>
                     </html>
                 """.trimIndent()
-                       }
+                        }
 
-                       MimeType.xml -> {
-                           """
+                        MimeType.xml -> {
+                            """
                     <?xml version="1.0" encoding="UTF-8"?>
                     <response>
                     <status>${response.statusCode}</status>
                     <body>${response.body}</body>
                     </response>
                 """.trimIndent()
-                       }
+                        }
 
-                       else -> {
-                           response.body.toString()
-                       }
-                   }
-                   bodyString
-               } else {
-                   // return empty string for null body
-                   // do I need to sanity check this?
-                   ""
-               }
-           }
-           in 300..399 -> {
-               response.kType = typeOf<String>()
-               response.body?.toString() ?: ""
-           }
-           in 400..499 -> {
-               response.kType = typeOf<String>()
-               response.body?.toString() ?: ""
-           }
-           else -> {
-               response.kType = typeOf<String>()
-               response.body?.toString() ?: ""
-           }
-       }
+                        else -> {
+                            response.body.toString()
+                        }
+                    }
+                    bodyString
+                } else {
+                    // return empty string for null body
+                    // do I need to sanity check this?
+                    ""
+                }
+            }
+
+            in 300..399 -> {
+                response.kType = typeOf<String>()
+                response.body?.toString() ?: ""
+            }
+
+            in 400..499 -> {
+                response.kType = typeOf<String>()
+                response.body?.toString() ?: ""
+            }
+
+            else -> {
+                response.kType = typeOf<String>()
+                response.body?.toString() ?: ""
+            }
+        }
 
 
         return APIGatewayProxyResponseEvent().apply {
