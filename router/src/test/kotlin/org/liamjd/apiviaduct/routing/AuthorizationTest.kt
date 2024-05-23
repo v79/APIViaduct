@@ -2,6 +2,7 @@ package org.liamjd.apiviaduct.routing
 
 import com.amazonaws.services.lambda.runtime.events.APIGatewayProxyRequestEvent
 import org.liamjd.apiviaduct.routing.RouterTest.TestContext
+import org.liamjd.apiviaduct.routing.extensions.getHeader
 import kotlin.test.Test
 import kotlin.test.assertEquals
 
@@ -67,7 +68,7 @@ internal class BasicFakeAuthorizer : Authorizer {
     override val simpleName: String = "Fake Basic Authorizer"
     override val type: AuthType = AuthType.BASIC
     override fun authorize(request: APIGatewayProxyRequestEvent): AuthResult {
-        if (request.headers["authorization"] == "Basic dXNlc") {
+        if (request.getHeader("Authorization") == "Basic dXNlc") {
             return AuthResult(true, "")
         }
         return AuthResult(false, "Unauthorized")
