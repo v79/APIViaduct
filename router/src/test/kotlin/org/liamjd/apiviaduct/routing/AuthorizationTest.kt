@@ -20,6 +20,7 @@ class AuthorizationTest {
         }, context)
         assert(response.statusCode == 200)
         assertEquals("text/plain", response.headers["Content-Type"])
+        testRouter.router.listRoutes()
     }
 
     @Test

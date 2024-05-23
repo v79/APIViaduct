@@ -24,6 +24,9 @@ internal class RouterTest {
         assert(response.statusCode == 200)
         assertEquals("application/json", response.headers["Content-Type"])
         assertEquals("https://example.com", response.headers["Access-Control-Allow-Origin"])
+
+        println("All routes:")
+        testRouter.router.listRoutes()
     }
 
     @Test

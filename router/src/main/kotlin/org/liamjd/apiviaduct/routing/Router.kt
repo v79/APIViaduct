@@ -147,6 +147,30 @@ class Router internal constructor() {
         }
         groups.addAll(childRouter.groups)
     }
+
+    /**
+     * Debug function to list all declared routes
+     * Pretty colours are used to make it easier to read
+     */
+    fun listRoutes() {
+        val RED = "\u001b[31m"
+        val RESET = "\u001b[0m"
+        val GREEN = "\u001b[32m"
+        val YELLOW = "\u001b[33m"
+        routes.values.forEach { route ->
+            print(
+                "$GREEN${route.predicate.method.padEnd(10)}$RESET${route.predicate.pathPattern.padEnd(30)}[$YELLOW${
+                    route.predicate.consumes.joinToString(
+                        ", "
+                    )
+                } $RED->$YELLOW ${route.predicate.produces.joinToString(", ")}$RESET]"
+            )
+            if (route.authorizer !is NoAuth) {
+                print("\t$RED Auth: [${route.authorizer.type}]$RESET")
+            }
+            println()
+        }
+    }
 }
 
 /**
