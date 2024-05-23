@@ -72,6 +72,15 @@ internal class LambdaRequestHandler :
                 if (route.key.acceptMatches(input, route.key.produces)) {
                     // all good, process the route
                     // TODO: Add Authentication here
+                    if(route.value.authorizer.type != AuthType.NONE) {
+                        val authResult = route.value.authorizer.authorize(input)
+                          if(!authResult.authorized) {
+                            return Response.unauthorized(
+                                body = authResult.message,
+                                headers = mapOf("Content-Type" to MimeType.plainText.toString())
+                            )
+                        }
+                    }
                     // TODO: Add filters here?
                     return processRoute(input, route.value)
                 } else {
