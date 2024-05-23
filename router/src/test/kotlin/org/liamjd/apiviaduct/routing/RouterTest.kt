@@ -369,7 +369,7 @@ internal class TestRouter : LambdaRouter() {
 }
 
 @Serializable
-internal class ReqObj(val name: String, val age: Int)
+internal data class ReqObj(val name: String, val age: Int)
 
 @Serializable
-internal class RespObj(val happy: Boolean, val favouriteColor: String)
+internal data class RespObj(val happy: Boolean, val favouriteColor: String)

@@ -73,7 +73,7 @@ fun LambdaRouter.openAPI(): String {
                             val typeString =
                                 kType.toString().removeSuffix("(Kotlin reflection is not available)").trim()
                             if (typeString != "kotlin.Unit") {
-                                sb.appendLine("              type: object")
+                                sb.appendLine("              type: object (${route.key.kType})")
                                 // ${typeString.substringAfterLast(".")}
                             } else {
                                 sb.appendLine("              type: string") // fallback to string

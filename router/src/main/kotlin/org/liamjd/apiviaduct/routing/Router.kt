@@ -160,8 +160,10 @@ class Router internal constructor() {
         val GREEN = "\u001b[32m"
         val YELLOW = "\u001b[33m"
         routes.values.forEach { route ->
+            var kTypeString = if(route.predicate.kType != null) route.predicate.kType.toString().substringAfterLast(".").substringBefore("(") else null
+            if(kTypeString.equals( "Unit ") )kTypeString = null
             print(
-                "$GREEN${route.predicate.method.padEnd(10)}$RESET${route.predicate.pathPattern.padEnd(30)}[$YELLOW${
+                "$GREEN${route.predicate.method.padEnd(10)}$RESET${route.predicate.pathPattern.padEnd(30)}[${kTypeString?: ""}$YELLOW${
                     route.predicate.consumes.joinToString(
                         ", "
                     )
