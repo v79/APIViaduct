@@ -132,6 +132,21 @@ class Router internal constructor() {
      * A group is a collection of routes which share a common parent path
      */
     class Group(val parentPath: String)
+
+    /**
+     * Create a group of routes which require authorization
+     * All routes will have a default no-op authorizer
+     */
+    fun auth(authorizer: Authorizer, block: Router.() -> Unit) {
+        val childRouter = Router()
+        childRouter.block()
+
+        childRouter.routes.forEach {
+            val routeCopy = it.value.copy(authorizer = authorizer)
+            routes[it.key] = routeCopy
+        }
+        groups.addAll(childRouter.groups)
+    }
 }
 
 /**
@@ -150,5 +165,5 @@ internal typealias Handler<I, T> = (request: Request<I>) -> Response<T>
 
 // TODO: authorizer would be added here
 data class RouteFunction<I, T : Any>(
-    val predicate: RequestPredicate, val handler: Handler<I, T>
+    val predicate: RequestPredicate, val handler: Handler<I, T>, var authorizer: Authorizer = NoAuth()
 )
