@@ -11,6 +11,8 @@ class Router internal constructor() {
     val consumeByDefault = setOf(MimeType.json)
     val produceByDefault = setOf(MimeType.json)
 
+    private val groups = mutableSetOf<Group>()
+
     /**
      * HTTP GET
      */
@@ -108,6 +110,28 @@ class Router internal constructor() {
     ).also { predicate ->
         routes[predicate] = RouteFunction(predicate, handler)
     }
+
+    /**
+     * Create a grouping of routes which share a common parent path.
+     * It does this by creating a new instance of the Router, then copying its routes into the parent router, modifying the pathParameter of each
+     */
+    fun group(parentPath: String, block: Router.() -> Unit) {
+        val childRouter = Router()
+        childRouter.block()
+
+        groups.add(Group(parentPath))
+
+        childRouter.routes.forEach {
+            val routeCopy = it.key.copy(pathPattern = parentPath + it.key.pathPattern)
+            routes[routeCopy] =
+                it.value.copy().apply { it.value.predicate.pathPattern = parentPath + it.key.pathPattern }
+        }
+    }
+
+    /**
+     * A group is a collection of routes which share a common parent path
+     */
+    class Group(val parentPath: String)
 }
 
 /**

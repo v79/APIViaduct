@@ -183,6 +183,56 @@ internal class RouterTest {
         assert(response.body.startsWith("Could not deserialize body"))
     }
 
+    // multiple methods on same route
+    @Test
+    fun `returns correct response for POST request on route that accepts both POST and PUT`() {
+        val testRouter = TestRouter()
+        val response = testRouter.handleRequest(APIGatewayProxyRequestEvent().apply {
+            path = "/multipleMethods"
+            httpMethod = "POST"
+            headers = mapOf("accept" to "text/plain")
+        }, context)
+        println(response)
+        assertEquals(200, response.statusCode)
+        assertEquals("POST: This route accepts PUT and POST", response.body)
+    }
+    @Test
+    fun `returns correct response for PUT request on route that accepts both POST and PUT`() {
+        val testRouter = TestRouter()
+        val response = testRouter.handleRequest(APIGatewayProxyRequestEvent().apply {
+            path = "/multipleMethods"
+            httpMethod = "PUT"
+            headers = mapOf("accept" to "text/plain")
+        }, context)
+        assertEquals(200, response.statusCode)
+        assertEquals("PUT: This route accepts PUT and POST", response.body)
+    }
+
+    // route grouping
+    @Test
+    fun `returns correct response for GET request on grouped route`() {
+        val testRouter = TestRouter()
+        val response = testRouter.handleRequest(APIGatewayProxyRequestEvent().apply {
+            path = "/group/test"
+            httpMethod = "GET"
+            headers = mapOf("accept" to "text/plain")
+        }, context)
+        assertEquals(200, response.statusCode)
+        assertEquals("This route was /group/test", response.body)
+    }
+
+    @Test
+    fun `returns correct response for GET request on nested grouped route`() {
+        val testRouter = TestRouter()
+        val response = testRouter.handleRequest(APIGatewayProxyRequestEvent().apply {
+            path = "/group/nested/test"
+            httpMethod = "GET"
+            headers = mapOf("accept" to "text/plain")
+        }, context)
+        assertEquals(200, response.statusCode)
+        assertEquals("This route was /group/nested/test", response.body)
+    }
+
     // This is a test context that can be used to test the LambdaRouter
     // The values don't matter, as long as they are not null
     class TestContext : Context {
@@ -218,6 +268,17 @@ internal class TestRouter : LambdaRouter() {
         post("/postTest", handler = { _: Request<Unit> -> Response.ok() })
         put("/putTest", handler = { _: Request<Unit> -> Response.ok() })
         get("/notImplemented", handler = { _: Request<Unit> -> Response.notImplemented() })
+        // multiple methods on same route
+        put(
+            "/multipleMethods",
+            handler = { _: Request<Unit> -> Response.ok("PUT: This route accepts PUT and POST") }).supplies(
+            MimeType.plainText
+        )
+        post(
+            "/multipleMethods",
+            handler = { _: Request<Unit> -> Response.ok("POST: This route accepts PUT and POST") }).supplies(
+            MimeType.plainText
+        )
         // overriding the default consumes and produces
         get("/getText", handler = { _: Request<Unit> -> Response.ok() }).supplies(setOf(MimeType.plainText))
         put("/putText", handler = { _: Request<Unit> -> Response.ok() }).expects(setOf(MimeType.plainText))
@@ -233,7 +294,6 @@ internal class TestRouter : LambdaRouter() {
                     )
                 )
             })
-
         post(
             "/giveMeYaml",
             handler = { request: Request<ReqObj> ->
@@ -244,6 +304,20 @@ internal class TestRouter : LambdaRouter() {
                     )
                 )
             }).supplies(MimeType.yaml).expects(MimeType.json)
+
+        // route grouping
+        group("/group") {
+            get("/test", handler = { _: Request<Unit> -> Response.ok(body = "This route was /group/test") }).supplies(
+                MimeType.plainText
+            )
+            group("/nested") {
+                get(
+                    "/test",
+                    handler = { _: Request<Unit> -> Response.ok(body = "This route was /group/nested/test") }).supplies(
+                    MimeType.plainText
+                )
+            }
+        }
     }
 }
 
