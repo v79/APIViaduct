@@ -43,7 +43,7 @@ internal class RouterTest {
         val response = testRouter.handleRequest(APIGatewayProxyRequestEvent().apply {
             path = "/test"
             httpMethod = "POST"
-            headers = mapOf("accept" to "application/json")
+            headers = mapOf("accept" to "text/plain")
         }, context)
         assertEquals(405, response.statusCode)
         assertEquals(response.headers["Allow"], "GET")
