@@ -30,7 +30,6 @@ abstract class LambdaRouter {
                 handler.router = router
                 handler.handleRequest(input, context)
             }
-
 }
 
 /**
@@ -64,7 +63,7 @@ internal class LambdaRequestHandler :
     private fun validateRoute(input: APIGatewayProxyRequestEvent): Response<out Any> {
         var routeFound = false
         // find all the routes which match the path
-        router.routes.filterKeys { it.pathPattern == input.path }.entries.forEach { route ->
+        router.routes.filter { matchPath(input, it.value) }.entries.forEach { route ->
             routeFound = true
             println("Checking route ${route.key.method} ${route.key.pathPattern}")
             // now check if the method matches
@@ -88,6 +87,30 @@ internal class LambdaRequestHandler :
         }
         // we have exhausted all routes, return 404
         return createNoMatchingRouteResponse(input.httpMethod, input.path, input.acceptedMediaTypes())
+    }
+
+    /**
+     * Match the path of the incoming request to the path pattern of the route
+     * Checking for parameters specified in { braces }
+     * @param input the incoming request
+     * @param route the route to match against
+     */
+    private fun matchPath(input: APIGatewayProxyRequestEvent, route: RouteFunction<*, *>): Boolean {
+        val pathParts = input.path.split("/")
+        val routeParts = route.predicate.pathPattern.split("/")
+        if (pathParts.size != routeParts.size) {
+            return false
+        }
+        for (i in routeParts.indices) {
+            if (routeParts[i].startsWith("{") && routeParts[i].endsWith("}")) {
+                // this is a path parameter, so we don't need to match it
+                continue
+            }
+            if (routeParts[i] != pathParts[i]) {
+                return false
+            }
+        }
+        return true
     }
 
 

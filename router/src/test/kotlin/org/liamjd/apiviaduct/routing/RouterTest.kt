@@ -233,6 +233,43 @@ internal class RouterTest {
         assertEquals("This route was /group/nested/test", response.body)
     }
 
+    // path parameters
+    @Test
+    fun `returns correct response for GET request with path parameter`() {
+        val testRouter = TestRouter()
+        val response = testRouter.handleRequest(APIGatewayProxyRequestEvent().apply {
+            path = "/params/123"
+            httpMethod = "GET"
+            headers = mapOf("accept" to "text/plain")
+        }, context)
+        assertEquals(200, response.statusCode)
+        assertEquals("Getting item with id=123", response.body)
+    }
+
+    @Test
+    fun `returns correct response for PUT request with longer path parameter`() {
+        val testRouter = TestRouter()
+        val response = testRouter.handleRequest(APIGatewayProxyRequestEvent().apply {
+            path = "/params/new/456/book"
+            httpMethod = "PUT"
+            headers = mapOf("accept" to "text/plain")
+        }, context)
+        assertEquals(200, response.statusCode)
+        assertEquals("Creating new book with ISBN=456", response.body)
+    }
+
+    @Test
+    fun `returns correct response for POST request with multiple path parameters`() {
+        val testRouter = TestRouter()
+        val response = testRouter.handleRequest(APIGatewayProxyRequestEvent().apply {
+            path = "/params/new/Christopher/42"
+            httpMethod = "POST"
+            headers = mapOf("accept" to "text/plain")
+        }, context)
+        assertEquals(200, response.statusCode)
+        assertEquals("Creating new person 'Christopher' aged 42", response.body)
+    }
+
     // This is a test context that can be used to test the LambdaRouter
     // The values don't matter, as long as they are not null
     class TestContext : Context {
@@ -317,6 +354,13 @@ internal class TestRouter : LambdaRouter() {
                     MimeType.plainText
                 )
             }
+        }
+
+        // path parameters
+        group("/params") {
+            get("/{id}", handler = { request: Request<Unit> -> Response.ok(body = "Getting item with id=${request.pathParameters["id"]}") }).supplies(MimeType.plainText)
+            put("/new/{isbn}/book", handler = { request: Request<Unit> -> Response.ok(body = "Creating new book with ISBN=${request.pathParameters["isbn"]}") }).supplies(MimeType.plainText)
+            post("/new/{name}/{age}", handler = { request: Request<Unit> -> Response.ok(body = "Creating new person '${request.pathParameters["name"]}' aged ${request.pathParameters["age"]}") }).supplies(MimeType.plainText)
         }
     }
 }
