@@ -57,9 +57,10 @@ object RouteProcessor {
                                 input.body
                             }
                         } else input.body
+                        // construct the request object
                         val request = Request(input, bodyObject, handlerFunction.predicate.pathPattern)
-                        // call the handler function with the request object; this will return a [Response]; if it catches an error then that's the fault of the handler function
                         try {
+                            // call the handler function with the request object; this will return a [Response]; if it catches an error then that's the fault of the handler function
                             (handler as HandlerFunction<*, *>)(request)
                         } catch (e: Exception) {
                             println("Error calling handler function: ${e.message}")
