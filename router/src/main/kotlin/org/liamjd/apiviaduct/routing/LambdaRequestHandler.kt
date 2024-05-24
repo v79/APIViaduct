@@ -15,13 +15,13 @@ import kotlin.reflect.typeOf
 /**
  * Base class for creating a Lambda router. Your project should create an object that extends this class
  */
-abstract class LambdaRouter {
+abstract class LambdaRouter : RequestHandler<APIGatewayProxyRequestEvent, APIGatewayProxyResponseEvent> {
     open val corsDomain: String = "*"
     abstract val router: Router
     private val handler = LambdaRequestHandler()
 
     // The AWS API requires a function called handleRequest with the APIGatewayProxyRequestEvent and Context as parameters
-    fun handleRequest(input: APIGatewayProxyRequestEvent, context: Context): APIGatewayProxyResponseEvent =
+    override fun handleRequest(input: APIGatewayProxyRequestEvent, context: Context): APIGatewayProxyResponseEvent =
         input.apply {
             headers = headers?.mapKeys { it.key.lowercase() } ?: emptyMap()
         }
@@ -35,12 +35,11 @@ abstract class LambdaRouter {
 /**
  * We don't want to expose the real handler function to users of the library
  */
-internal class LambdaRequestHandler :
-    RequestHandler<APIGatewayProxyRequestEvent, APIGatewayProxyResponseEvent> {
+internal class LambdaRequestHandler {
     lateinit var router: Router
     var corsDomain: String = "*"
 
-    override fun handleRequest(input: APIGatewayProxyRequestEvent, context: Context): APIGatewayProxyResponseEvent {
+    fun handleRequest(input: APIGatewayProxyRequestEvent, context: Context): APIGatewayProxyResponseEvent {
         println(
             "RequestHandlerWrapper: handleRequest(): looking for route which matches request ${input.httpMethod} ${input.path} <${
                 input.getHeader(
@@ -72,9 +71,9 @@ internal class LambdaRequestHandler :
                 if (route.key.acceptMatches(input, route.key.produces)) {
                     // all good, process the route
                     // TODO: Add Authentication here
-                    if(route.value.authorizer.type != AuthType.NONE) {
+                    if (route.value.authorizer.type != AuthType.NONE) {
                         val authResult = route.value.authorizer.authorize(input)
-                          if(!authResult.authorized) {
+                        if (!authResult.authorized) {
                             return Response.unauthorized(
                                 body = authResult.message,
                                 headers = mapOf("Content-Type" to MimeType.plainText.toString())
