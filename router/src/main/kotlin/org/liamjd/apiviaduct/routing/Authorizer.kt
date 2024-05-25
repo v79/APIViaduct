@@ -22,7 +22,7 @@ data class AuthResult(val authorized: Boolean, val message: String)
 
 /** Supported authentication types */
 enum class AuthType {
-    NONE, BASIC, BEARER, JWT
+    NONE, BASIC, HTTP, BEARER, JWT
 }
 
 

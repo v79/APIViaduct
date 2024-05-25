@@ -15,7 +15,7 @@ data class Request<I>(
 ) {
     // TODO: Ideally, this should be Map<String, Any> but I can't figure out how to do that
     // It would be nice to be able to specify the type of the path parameters too
-    internal val pathParameters: Map<String, String> by lazy {
+    val pathParameters: Map<String, String> by lazy {
         buildMap {
             val inputParts = apiRequest.path.split("/")
             val routeParts = pathPattern.split("/")
