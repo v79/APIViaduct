@@ -43,20 +43,23 @@ object RouteProcessor {
                 } else {
                     return try {
                         val contentType = input.getHeader("Content-Type")
+                        val contentLength = input.getHeader("Content-Length")
                         println("Processing route: Converting $contentType to ${kType}. Deserializing...")
-                        val bodyObject = if (contentType != null) when (MimeType.parse(contentType)) {
-                            MimeType.json -> {
-                                Json.decodeFromString(serializer(kType), input.body)
-                            }
+                        val bodyObject =
+                            if (contentLength == "0") ""
+                            else if (contentType != null) when (MimeType.parse(contentType)) {
+                                MimeType.json -> {
+                                    Json.decodeFromString(serializer(kType), input.body)
+                                }
 
-                            MimeType.yaml -> {
-                                Yaml.default.decodeFromString(serializer(kType), input.body)
-                            }
+                                MimeType.yaml -> {
+                                    Yaml.default.decodeFromString(serializer(kType), input.body)
+                                }
 
-                            else -> {
-                                input.body
-                            }
-                        } else input.body
+                                else -> {
+                                    input.body
+                                }
+                            } else input.body
                         val request = Request(input, bodyObject, handlerFunction.predicate.pathPattern)
                         // call the handler function with the request object; this will return a [Response]; if it catches an error then that's the fault of the handler function
                         try {

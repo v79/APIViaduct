@@ -138,6 +138,28 @@ class RouteProcessorTest {
         assert((response.body as String).startsWith("Could not deserialize body."))
 
     }
+
+    @Test
+    fun `if Content-Length is zero, body is empty string`() {
+        val input = APIGatewayProxyRequestEvent().apply {
+            httpMethod = "PUT"
+            body = ""
+            headers = mapOf("Content-Type" to "application/json", "Content-Length" to "0")
+        }
+        val handlerFunction: RouteFunction<String, String> = RouteFunction(
+            predicate = RequestPredicate(
+                method = "PUT",
+                pathPattern = "/test",
+                produces = setOf(MimeType.json),
+                consumes = setOf(MimeType.json)
+            ),
+            handler = { _: Any -> Response.ok("test") }
+        )
+        handlerFunction.predicate.kType = typeOf<String>()
+        val response = RouteProcessor.processRoute(input, handlerFunction)
+        assertEquals(200, response.statusCode)
+        assertEquals("test", response.body)
+    }
 }
 
 @Serializable
