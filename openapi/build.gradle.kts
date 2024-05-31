@@ -15,11 +15,14 @@ dependencies {
     implementation("com.google.devtools.ksp:symbol-processing-api:1.9.20-1.0.14")
 
     testImplementation(kotlin("test"))
+    testImplementation("com.github.tschuchortdev:kotlin-compile-testing:1.5.0")
+    testImplementation("com.github.tschuchortdev:kotlin-compile-testing-ksp:1.6.0")
 }
 
 tasks.test {
     useJUnitPlatform()
 }
+
 kotlin {
     jvmToolchain(17)
 }

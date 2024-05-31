@@ -9,21 +9,34 @@ class OpenAPIProcessor(
 ) : SymbolProcessor {
 
     override fun process(resolver: Resolver): List<KSAnnotated> {
-        environment.logger.warn("**** APIViaduct OpenAPI Processor")
+
+        // get and parse arguments
+        val schemaAnnotation = environment.options["schemaAnnotation"] ?: "org.liamjd.apiviaduct.schema.OpenAPISchema"
+        environment.logger.info("**** APIViaduct OpenAPI Processor scanning for '$schemaAnnotation' annotated classes ****")
+
         resolver.getAllFiles().forEach {
-            environment.logger.warn("**** APIViaduct File: ${it.fileName}")
+            environment.logger.info("APIViaduct scanning file: ${it.fileName}")
         }
-        val annotatedClasses = resolver.getSymbolsWithAnnotation(OpenAPISchema::class.qualifiedName!!)
+        environment.logger.info("----------")
+        resolver.getAllFiles().forEach { file ->
+            file.declarations.forEach { declaration ->
+                declaration.annotations.forEach { annotation ->
+                    environment.logger.info("APIViaduct found annotation: $annotation")
+                }
+            }
+        }
+        val schemaClasses = resolver.getSymbolsWithAnnotation(schemaAnnotation, true)
             .filterIsInstance<KSClassDeclaration>()
+        buildSchemaYaml(schemaClasses, schemaAnnotation)
 
-        annotatedClasses.forEach {
-            environment.logger.warn("\t**** APIViaduct ${it.simpleName.asString()}")
-        }
+        return schemaClasses.toList()
+    }
 
+    private fun buildSchemaYaml(schemas: Sequence<KSClassDeclaration>, schemaAnnotation: String) {
         val stringBuilder = StringBuilder()
-        if (annotatedClasses.iterator().hasNext()) {
-            annotatedClasses.forEach {
-                environment.logger.warn("**** APIViaduct Found class ${it.simpleName.asString()} with @OpenAPISchema annotation")
+        if (schemas.iterator().hasNext()) {
+            schemas.forEach {
+                environment.logger.warn("**** APIViaduct Found class ${it.simpleName.asString()} with @$schemaAnnotation annotation")
                 stringBuilder.appendLine("${it.simpleName.asString()}:")
                 stringBuilder.appendLine("  type: object")
                 stringBuilder.appendLine("  properties:")
@@ -32,26 +45,29 @@ class OpenAPIProcessor(
                     stringBuilder.appendLine("      type: ${property.type}")
                 }
             }
+            writeToFile(stringBuilder.toString(), "api-schema")
         } else {
-            environment.logger.warn("**** APIViaduct No more classes found with @OpenAPISchema annotation")
-
-            return emptyList()
+            environment.logger.warn("**** APIViaduct No more classes found with $schemaAnnotation annotation")
         }
-        environment.logger.warn("**** APIViaduct Output is:")
-        environment.logger.warn(stringBuilder.toString())
-        writeToFile(stringBuilder.toString())
-        return emptyList()
     }
 
-    private fun writeToFile(content: String) {
-        val output = environment.codeGenerator.createNewFile(
-            Dependencies.ALL_FILES,
-            "openapi.schema",
-            "api-schema",
-            "yaml"
-        )
-        output.write(content.toByteArray(Charsets.UTF_8))
-        environment.logger.info("**** APIViaduct Written output file to build/generated/ksp/kotlin/main/openapi/schema/api-schema.yaml")
+    private fun writeToFile(content: String, filename: String) {
+        try {
+            if (environment.codeGenerator.generatedFile.isEmpty()) {
+                val output = environment.codeGenerator.createNewFile(
+                    Dependencies.ALL_FILES,
+                    "openapi.schema",
+                    filename,
+                    "yaml"
+                )
+                output.write(content.toByteArray(Charsets.UTF_8))
+                environment.logger.info("**** APIViaduct Written output file to ${environment.codeGenerator.generatedFile.first().path}")
+            } else {
+                environment.logger.warn("**** APIViaduct No output file generated")
+            }
+        } catch (fee: FileAlreadyExistsException) {
+            environment.logger.info("**** APIViaduct Ignoring file already exists error writing output file: ${fee.message}")
+        }
     }
 }
 
