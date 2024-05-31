@@ -16,10 +16,10 @@ class OpenAPIProcessor(
         val routeAnnotation = environment.options["routeAnnotation"] ?: "org.liamjd.apiviaduct.schema.OpenAPIRoute"
 
         // debugging - list all the scanned files
-       /* environment.logger.info("----------")
-        resolver.getAllFiles().forEach {
-            environment.logger.info("APIViaduct scanning file: ${it.fileName}")
-        }*/
+        /* environment.logger.info("----------")
+         resolver.getAllFiles().forEach {
+             environment.logger.info("APIViaduct scanning file: ${it.fileName}")
+         }*/
         // debugging - list all the declarations in the scanned files
         resolver.getAllFiles().forEach { file ->
             file.declarations.forEach { declaration ->
@@ -84,8 +84,8 @@ class OpenAPIProcessor(
                         return@forEach
                     }
 
-                    route.parameters.forEach { param ->
-                        environment.logger.warn("\tParameter: ${param.name?.asString()}, type: ${param.type}<${param.type.element?.typeArguments?.first()?.type}>")
+                    route.parameters.forEach { rParam ->
+                        environment.logger.warn("\tParameter: ${rParam.name?.asString()}, type: ${rParam.type}<${rParam.type.element?.typeArguments?.first()?.type}>")
                     }
                     stringBuilder.appendLine()
                 }
@@ -111,11 +111,10 @@ class OpenAPIProcessor(
     private fun writeToFile(content: String, filename: String) {
         try {
             if (environment.codeGenerator.generatedFile.isEmpty()) {
-                val output = environment.codeGenerator.createNewFile(
-                    Dependencies.ALL_FILES,
-                    "openapi.schema",
-                    filename,
-                    "yaml"
+                val output = environment.codeGenerator.createNewFileByPath(
+                    dependencies = Dependencies.ALL_FILES,
+                    path = "src/main/resources/$filename",
+                    extensionName = "yaml"
                 )
                 output.write(content.toByteArray(Charsets.UTF_8))
                 environment.logger.info("APIViaduct Written output file to ${environment.codeGenerator.generatedFile.first().path}")
