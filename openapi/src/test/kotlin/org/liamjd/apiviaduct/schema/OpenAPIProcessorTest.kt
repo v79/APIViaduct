@@ -12,15 +12,14 @@ class OpenAPIProcessorTest {
 
     @Language("kotlin")
     val dataModels = """
-              import org.liamjd.apiviaduct.schema.OpenAPISchema
-              import org.liamjd.apiviaduct.schema.TestSchemaAnno
-               
-                @TestSchemaAnno
-                data class TestClass(val name: String, val age: Int)
-               
-                @OpenAPISchema
-                data class OpenAPITestClass(val name: String, val age: Int)
-
+          import org.liamjd.apiviaduct.schema.OpenAPISchema
+          import org.liamjd.apiviaduct.schema.TestSchemaAnno
+           
+          @TestSchemaAnno
+          data class TestClass(val name: String, val age: Int)
+           
+          @OpenAPISchema
+          data class OpenAPITestClass(val name: String, val age: Int)
     """.trimIndent()
 
     @Language("kotlin")
@@ -30,9 +29,32 @@ class OpenAPIProcessorTest {
         import org.liamjd.apiviaduct.routing.Request
         import org.liamjd.apiviaduct.routing.Response
         
-        @TestSchemaAnno
-        fun testFunction(request: Request<Unit>): Response<String> {
-            return Response.OK("Controller says hi")
+        class TestController {
+            @OpenAPIRoute
+            fun testFunction(request: Request<Person>): Response<String> {
+                return Response.OK("Controller says hi")
+            }
+        }
+    """.trimIndent()
+
+    /**
+     * This imagined use case is NOT possible with KSP, as KSP only recognizes declared symbols (functions, classes, types etc) and does NOT
+     * look inside function bodies. Therefore, it is not possible to scan for annotations on a call to a lambda function like "get(/path)"
+     */
+    @Language("kotlin")
+    val lambdaRouteFunction = """
+        import org.liamjd.apiviaduct.schema.OpenAPILambdaRoute
+        import org.liamjd.apiviaduct.routing.Request
+        import org.liamjd.apiviaduct.routing.Response
+              
+        fun get(path: String, handler: (Request<T>) -> Response<I>) {
+            // do something
+        }
+        class Greep {
+          init {
+            @OpenAPILambdaRoute
+            get("/test") { request: Request<Person> -> Response.OK("Controller says hi") }
+          }
         }
     """.trimIndent()
 
@@ -51,7 +73,7 @@ class OpenAPIProcessorTest {
         }.compile()
 
         assertEquals(KotlinCompilation.ExitCode.OK, result.exitCode)
-        assert(result.messages.contains("APIViaduct Found class TestClass with @org.liamjd.apiviaduct.schema.TestSchemaAnno annotation"))
+        assert(result.messages.contains("APIViaduct found class TestClass with @org.liamjd.apiviaduct.schema.TestSchemaAnno annotation"))
     }
 
     @OptIn(ExperimentalCompilerApi::class)
@@ -67,10 +89,10 @@ class OpenAPIProcessorTest {
             inheritClassPath = true
         }.compile()
         assertEquals(KotlinCompilation.ExitCode.OK, result.exitCode)
-        assert(result.messages.contains("APIViaduct Found class OpenAPITestClass with @org.liamjd.apiviaduct.schema.OpenAPISchema annotation"))
+        assert(result.messages.contains("APIViaduct found class OpenAPITestClass with @org.liamjd.apiviaduct.schema.OpenAPISchema annotation"))
     }
 
-/*    @OptIn(ExperimentalCompilerApi::class)
+    @OptIn(ExperimentalCompilerApi::class)
     @Test
     fun `can find controller functions with OpenAPIRoute annotation`() {
         val kotlinSource = SourceFile.kotlin(
@@ -81,13 +103,17 @@ class OpenAPIProcessorTest {
         val result = KotlinCompilation().apply {
             sources = listOf(kotlinSource)
             symbolProcessorProviders = listOf(OpenAPISchemaProcessorProvider())
+            inheritClassPath = true
         }.compile()
 
         assertEquals(KotlinCompilation.ExitCode.OK, result.exitCode)
-        assert(result.messages.contains("TestController.kt"))
-    }*/
+        assert(result.messages.contains("APIViaduct found function testFunction with @org.liamjd.apiviaduct.schema.OpenAPIRoute annotation"))
+    }
 }
 
 @Target(AnnotationTarget.CLASS)
 @Retention(AnnotationRetention.SOURCE)
 annotation class TestSchemaAnno
+
+@OpenAPISchema
+class Person(val name: String, val age: Int)
