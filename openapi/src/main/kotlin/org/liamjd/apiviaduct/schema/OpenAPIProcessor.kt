@@ -113,7 +113,7 @@ class OpenAPIProcessor(
             if (environment.codeGenerator.generatedFile.isEmpty()) {
                 val output = environment.codeGenerator.createNewFileByPath(
                     dependencies = Dependencies.ALL_FILES,
-                    path = "src/main/resources/$filename",
+                    path = filename,
                     extensionName = "yaml"
                 )
                 output.write(content.toByteArray(Charsets.UTF_8))
