@@ -30,7 +30,7 @@ class OpenAPIProcessorTest {
         import org.liamjd.apiviaduct.routing.Response
         
         class TestController {
-            @OpenAPIRoute
+            @OpenAPIRoute("Test function", "This is a test function")
             fun testFunction(request: Request<Person>): Response<String> {
                 return Response.OK("Controller says hi")
             }
