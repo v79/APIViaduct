@@ -1,10 +1,11 @@
 plugins {
     kotlin("jvm")
+    kotlin("plugin.serialization") version "1.9.23"
     `maven-publish`
 }
 
 group = "org.liamjd.apiviaduct"
-version = "0.3-SNAPSHOT"
+version = "0.4-SNAPSHOT"
 
 repositories {
     mavenCentral()
@@ -13,6 +14,7 @@ repositories {
 dependencies {
     // KSP
     implementation("com.google.devtools.ksp:symbol-processing-api:1.9.20-1.0.14")
+
 
     testImplementation(kotlin("test"))
     testImplementation("com.github.tschuchortdev:kotlin-compile-testing:1.5.0")
