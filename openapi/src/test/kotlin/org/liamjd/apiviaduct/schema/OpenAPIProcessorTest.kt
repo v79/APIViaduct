@@ -24,13 +24,13 @@ class OpenAPIProcessorTest {
 
     @Language("kotlin")
     val controllerFunction = """
-        import org.liamjd.apiviaduct.schema.OpenAPIRoute
+        import org.liamjd.apiviaduct.schema.OpenAPIPath
         import org.liamjd.apiviaduct.schema.OpenAPISchema
         import org.liamjd.apiviaduct.routing.Request
         import org.liamjd.apiviaduct.routing.Response
         
         class TestController {
-            @OpenAPIRoute("Test function", "This is a test function")
+            @OpenAPIPath("Test function", "This is a test function")
             fun testFunction(request: Request<Person>): Response<String> {
                 return Response.OK("Controller says hi")
             }
@@ -55,6 +55,21 @@ class OpenAPIProcessorTest {
             @OpenAPILambdaRoute
             get("/test") { request: Request<Person> -> Response.OK("Controller says hi") }
           }
+        }
+    """.trimIndent()
+
+    @Language("kotlin")
+    val completeLambdaRouter = """
+        import org.liamjd.apiviaduct.routing.*
+        import org.liamjd.apiviaduct.schema.OpenAPIInfo
+
+        @OpenAPIInfo("My test API", "1.0", "This is a test API")
+        class MyLambdaRouter : LambdaRouter() {
+            override val router = lambdaRouter {
+                get("/hello") {
+                    request: Request<Unit> -> Response.OK("Hello, world!")
+                }
+            }
         }
     """.trimIndent()
 
@@ -94,7 +109,7 @@ class OpenAPIProcessorTest {
 
     @OptIn(ExperimentalCompilerApi::class)
     @Test
-    fun `can find controller functions with OpenAPIRoute annotation`() {
+    fun `can find controller functions with OpenAPIPath annotation`() {
         val kotlinSource = SourceFile.kotlin(
             name = "TestController.kt",
             contents = controllerFunction, trimIndent = true, isMultiplatformCommonSource = false
@@ -107,7 +122,7 @@ class OpenAPIProcessorTest {
         }.compile()
 
         assertEquals(KotlinCompilation.ExitCode.OK, result.exitCode)
-        assert(result.messages.contains("APIViaduct found function testFunction with @org.liamjd.apiviaduct.schema.OpenAPIRoute annotation"))
+        assert(result.messages.contains("APIViaduct found function testFunction with @org.liamjd.apiviaduct.schema.OpenAPIPath annotation"))
     }
 }
 

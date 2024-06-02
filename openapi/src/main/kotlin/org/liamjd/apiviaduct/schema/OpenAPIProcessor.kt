@@ -13,7 +13,8 @@ class OpenAPIProcessor(
 
         // get and parse arguments
         val schemaAnnotation = environment.options["schemaAnnotation"] ?: "org.liamjd.apiviaduct.schema.OpenAPISchema"
-        val routeAnnotation = environment.options["routeAnnotation"] ?: "org.liamjd.apiviaduct.schema.OpenAPIRoute"
+        val pathAnnotation = environment.options["routeAnnotation"] ?: "org.liamjd.apiviaduct.schema.OpenAPIPath"
+        val infoAnnotation = environment.options["infoAnnotation"] ?: "org.liamjd.apiviaduct.schema.OpenAPIInfo"
 
         // debugging - list all the scanned files
         /* environment.logger.info("----------")
@@ -38,8 +39,8 @@ class OpenAPIProcessor(
 //        environment.logger.info("**** APIViaduct OpenAPI Processor scanning for '$routeAnnotation' annotated functions ****")
         // get the functions annotated with the route annotation
         val routeMethods =
-            resolver.getSymbolsWithAnnotation(routeAnnotation, true).filterIsInstance<KSFunctionDeclaration>()
-        buildFunctionYaml(routeMethods, routeAnnotation)
+            resolver.getSymbolsWithAnnotation(pathAnnotation, true).filterIsInstance<KSFunctionDeclaration>()
+        buildFunctionYaml(routeMethods, pathAnnotation)
 
         return schemaClasses.toList()
     }
@@ -102,7 +103,7 @@ class OpenAPIProcessor(
 //                    stringBuilder.appendLine("      type: ${parameter.type}")
 //                }
             }
-            writeToFile(stringBuilder.toString(), "api-routes")
+            writeToFile(stringBuilder.toString(), "openapi")
         } else {
             environment.logger.warn("APIViaduct No more functions found with $routeAnnotation annotation")
         }
