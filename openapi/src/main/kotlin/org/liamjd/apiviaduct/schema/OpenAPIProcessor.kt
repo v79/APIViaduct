@@ -11,16 +11,13 @@ class OpenAPIProcessor(
 
     override fun process(resolver: Resolver): List<KSAnnotated> {
 
+        val schemaProcessor = ObjectSchemaProcessor(environment.logger)
+
         // get and parse arguments
         val schemaAnnotation = environment.options["schemaAnnotation"] ?: "org.liamjd.apiviaduct.schema.OpenAPISchema"
         val pathAnnotation = environment.options["routeAnnotation"] ?: "org.liamjd.apiviaduct.schema.OpenAPIPath"
         val infoAnnotation = environment.options["infoAnnotation"] ?: "org.liamjd.apiviaduct.schema.OpenAPIInfo"
 
-        // debugging - list all the scanned files
-        /* environment.logger.info("----------")
-         resolver.getAllFiles().forEach {
-             environment.logger.info("APIViaduct scanning file: ${it.fileName}")
-         }*/
         // debugging - list all the declarations in the scanned files
         resolver.getAllFiles().forEach { file ->
             file.declarations.forEach { declaration ->
@@ -30,10 +27,12 @@ class OpenAPIProcessor(
                 }
             }
         }
+
         // get the classes annotated with the schema annotation
         val schemaClasses = resolver.getSymbolsWithAnnotation(schemaAnnotation, true)
-            .filterIsInstance<KSClassDeclaration>()
-        buildSchemaYaml(schemaClasses, schemaAnnotation)
+            .filter(schemaProcessor::validateSymbol).map { it as KSClassDeclaration }
+        val schemaYaml = schemaProcessor.buildYamlForClasses(schemaClasses)
+        writeToFile(schemaYaml, "api-schema")
 
 
 //        environment.logger.info("**** APIViaduct OpenAPI Processor scanning for '$routeAnnotation' annotated functions ****")
