@@ -5,6 +5,9 @@ import com.google.devtools.ksp.symbol.KSAnnotated
 import com.google.devtools.ksp.symbol.KSClassDeclaration
 import com.google.devtools.ksp.symbol.KSFunctionDeclaration
 
+/**
+ * This class processes the annotations in the source code, generating OpenAPI schema, path and info objects
+ */
 class OpenAPIProcessor(
     private val environment: SymbolProcessorEnvironment,
 ) : SymbolProcessor {
@@ -12,6 +15,7 @@ class OpenAPIProcessor(
     override fun process(resolver: Resolver): List<KSAnnotated> {
 
         val schemaProcessor = ObjectSchemaProcessor(environment.logger)
+        val infoProcessor = OpenAPIInfoProcessor(environment.logger)
 
         // get and parse arguments
         val schemaAnnotation = environment.options["schemaAnnotation"] ?: "org.liamjd.apiviaduct.schema.OpenAPISchema"
@@ -28,7 +32,18 @@ class OpenAPIProcessor(
             }
         }
 
-        // get the classes annotated with the schema annotation
+        /** 1. get the first class annotated with the info annotation */
+        val infoClass = resolver.getSymbolsWithAnnotation(infoAnnotation, true).filter(infoProcessor::validateSymbol)
+            .firstOrNull() as KSClassDeclaration?
+        infoClass?.let {
+            environment.logger.info("APIViaduct found class ${it.simpleName.asString()} with @$infoAnnotation annotation")
+            val infoYaml = infoProcessor.buildInfoYamlFromAnnotation(it)
+            writeToFile(infoYaml, "api-info")
+        } ?: run {
+            environment.logger.warn("APIViaduct No class found with $infoAnnotation annotation")
+        }
+
+        /** 2. get the classes annotated with the schema annotation */
         val schemaClasses = resolver.getSymbolsWithAnnotation(schemaAnnotation, true)
             .filter(schemaProcessor::validateSymbol).map { it as KSClassDeclaration }
         val schemaYaml = schemaProcessor.buildYamlForClasses(schemaClasses)

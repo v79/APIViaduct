@@ -67,7 +67,6 @@ class ObjectSchemaProcessor(private val logger: KSPLogger) {
                 stringBuilder.appendLine("      type: array")
                 stringBuilder.appendLine("      items:")
                 // get the type of the collection
-                // this should really be a $ref to the schema for the type but that's for another day
                 stringBuilder.appendLine("        \$ref: '#/components/schemas/${property.type.resolve().arguments.first().type}'")
             } else {
                 // if the property is an enum class, we should get the enum values

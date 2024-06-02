@@ -137,6 +137,24 @@ enum class Color {
         assertEquals(KotlinCompilation.ExitCode.OK, result.exitCode)
         assert(result.messages.contains("APIViaduct found function testFunction with @org.liamjd.apiviaduct.schema.OpenAPIPath annotation"))
     }
+
+
+    @OptIn(ExperimentalCompilerApi::class)
+    @Test
+    fun `can find openAPIInfo annotation`() {
+        val kotlinSource = SourceFile.kotlin(
+            name = "TestController.kt",
+            contents = completeLambdaRouter, trimIndent = true, isMultiplatformCommonSource = false
+        )
+
+        val result = KotlinCompilation().apply {
+            sources = listOf(kotlinSource)
+            symbolProcessorProviders = listOf(OpenAPISchemaProcessorProvider())
+            inheritClassPath = true
+        }.compile()
+
+        assertEquals(KotlinCompilation.ExitCode.OK, result.exitCode)
+    }
 }
 
 @Target(AnnotationTarget.CLASS)
