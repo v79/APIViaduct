@@ -11,6 +11,11 @@ class Router internal constructor() {
     val consumeByDefault = setOf(MimeType.json)
     val produceByDefault = setOf(MimeType.json)
 
+    /**
+     * List of middlewares to be applied to all routes
+     */
+    val middlewares: MutableList<Middleware> = mutableListOf()
+
     private val groups = mutableSetOf<Group>()
 
     /**
@@ -146,6 +151,26 @@ class Router internal constructor() {
             routes[it.key] = routeCopy
         }
         groups.addAll(childRouter.groups)
+    }
+
+    /**
+     * Add a middleware to the router
+     * @param middleware The middleware to add
+     * @return The router instance for method chaining
+     */
+    fun middleware(middleware: Middleware): Router {
+        middlewares.add(middleware)
+        return this
+    }
+
+    /**
+     * Add multiple middlewares to the router
+     * @param middlewareList The list of middlewares to add
+     * @return The router instance for method chaining
+     */
+    fun middlewares(vararg middlewareList: Middleware): Router {
+        middlewares.addAll(middlewareList)
+        return this
     }
 }
 

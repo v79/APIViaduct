@@ -5,17 +5,51 @@ Inspired by my earlier project [Cantilever](https://www.cantilevers.org/), I wan
 
 RESTful routes will be defined using a Kotlin DSL, and uses Kotlinx Serialization for JSON (de)serialization. The project is built using Gradle and the AWS SDK for Kotlin.
 
-The library will support route grouping, authentication, all the main REST methods, and more. I hope to add an OpenAPI specification generator, and middleware our filters in the future. While the router defaults to JSON, it is possible to specify other content types such as text, YAML or any others supported by kotlinx.serialization.
+The library supports route grouping, authentication, all the main REST methods, middleware for cross-cutting concerns, and more. I hope to add an OpenAPI specification generator in the future. While the router defaults to JSON, it is possible to specify other content types such as text, YAML or any others supported by kotlinx.serialization.
 
-## Example
+## Examples
+
+### Basic Routing
 ```kotlin
   // a simple get request handler
   get("/hello") { _: Request<Unit> ->
-    Response.OK("Hello, world!")  
+    Response.ok(body = "Hello, world!")  
   }
   // a simple post request handler, expecting a JSON body for a data class of type 'Thingy'
   post("/new") { req: Request<Thingy> ->
     val body = req.body
-    Response.OK("You sent: ${body.name}")
+    Response.ok(body = "You sent: ${body.name}")
   }
 ```
+
+### Using Middleware
+```kotlin
+  // Create a router with routes
+  val router = lambdaRouter {
+    get("/hello") { _: Request<Unit> ->
+      Response.ok(body = "Hello, world!")
+    }
+  }
+
+  // Add a logging middleware
+  router.middleware(LoggingMiddleware())
+
+  // Or add multiple middlewares
+  router.middlewares(
+    LoggingMiddleware(),
+    // Custom middleware for request validation
+    object : Middleware {
+      override fun processRequest(request: APIGatewayProxyRequestEvent): APIGatewayProxyRequestEvent {
+        // Validate request
+        return request
+      }
+
+      override fun <T : Any> processResponse(response: Response<T>, request: APIGatewayProxyRequestEvent): Response<T> {
+        // Process response
+        return response
+      }
+    }
+  )
+```
+
+See the [router README](router/README.md) for more detailed documentation on middleware support.

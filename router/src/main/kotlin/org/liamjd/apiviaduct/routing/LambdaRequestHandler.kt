@@ -47,10 +47,24 @@ internal class LambdaRequestHandler {
                 )
             }->${input.acceptedMediaTypes()}>"
         )
-        // TODO: Serialize the response instead
-        val response: Response<out Any> = validateRoute(input)
 
-        val apiGatewayResponse = serializeResponse(response, input.acceptedMediaTypes().first(), corsDomain)
+        // Apply request middlewares
+        var processedInput = input
+        for (middleware in router.middlewares) {
+            processedInput = middleware.processRequest(processedInput)
+        }
+
+        // Process the route
+        val response: Response<out Any> = validateRoute(processedInput)
+
+        // Apply response middlewares
+        var processedResponse = response
+        for (middleware in router.middlewares.reversed()) {
+            @Suppress("UNCHECKED_CAST")
+            processedResponse = middleware.processResponse(processedResponse as Response<Any>, processedInput) as Response<out Any>
+        }
+
+        val apiGatewayResponse = serializeResponse(processedResponse, processedInput.acceptedMediaTypes().first(), corsDomain)
         return apiGatewayResponse
     }
 
@@ -280,5 +294,3 @@ internal class LambdaRequestHandler {
         return Response.notAcceptable(body = "", headers = mapOf("Content-Type" to canProvide.joinToString(",")))
     }
 }
-
-
