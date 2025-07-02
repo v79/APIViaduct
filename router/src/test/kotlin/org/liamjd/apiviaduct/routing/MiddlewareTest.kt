@@ -36,10 +36,8 @@ class MiddlewareTest {
         // Given
         val router = lambdaRouter {
             // Define routes
+            using(LoggingMiddleware())
         }
-
-        // When
-        router.middleware(LoggingMiddleware())
 
         // Then
         assertEquals(1, router.middlewares.size)
@@ -51,10 +49,10 @@ class MiddlewareTest {
         // Given
         val router = lambdaRouter {
             // Define routes
+            using(LoggingMiddleware())
+            using(TestMiddleware("test1"))
+            using(TestMiddleware("test2"))
         }
-
-        // When
-        router.middlewares(LoggingMiddleware(), TestMiddleware("test1"), TestMiddleware("test2"))
 
         // Then
         assertEquals(3, router.middlewares.size)
@@ -70,6 +68,10 @@ class MiddlewareTest {
         val responseRecorder = StringBuilder()
 
         val router = lambdaRouter {
+            using(RecordingMiddleware(requestRecorder, responseRecorder, "1"))
+            using(RecordingMiddleware(requestRecorder, responseRecorder, "2"))
+            using(RecordingMiddleware(requestRecorder, responseRecorder, "3"))
+
             get<Unit, String>("/test") { _ ->
                 requestRecorder.append("H")
                 val response = Response.ok(body = "Test Response")
@@ -77,12 +79,6 @@ class MiddlewareTest {
                 response
             }
         }
-
-        router.middlewares(
-            RecordingMiddleware(requestRecorder, responseRecorder, "1"),
-            RecordingMiddleware(requestRecorder, responseRecorder, "2"),
-            RecordingMiddleware(requestRecorder, responseRecorder, "3")
-        )
 
         val handler = LambdaRequestHandler()
         handler.router = router
@@ -106,26 +102,28 @@ class MiddlewareTest {
     fun `test middleware can modify request and response`() {
         // Given
         val router = lambdaRouter {
-            get("/test", { request: Request<Unit> ->
+            using(object : Middleware {
+                override fun processRequest(request: APIGatewayProxyRequestEvent): APIGatewayProxyRequestEvent {
+                    // Add a custom header to the request
+                    request.headers = (request.headers ?: emptyMap()) + mapOf("X-Test-Header" to "test-value")
+                    return request
+                }
+
+                override fun <T : Any> processResponse(
+                    response: Response<T>,
+                    request: APIGatewayProxyRequestEvent
+                ): Response<T> {
+                    // Add a custom header to the response
+                    return response.copy(headers = response.headers + mapOf("X-Response-Header" to "response-value"))
+                }
+            })
+
+            get("/test") { request: Request<Unit> ->
                 // Check if the header was added by the middleware
                 val headerValue = request.headers["X-Test-Header"]
                 Response.ok(body = "Header value: $headerValue")
-            })
-        }.middleware(object : Middleware {
-            override fun processRequest(request: APIGatewayProxyRequestEvent): APIGatewayProxyRequestEvent {
-                // Add a custom header to the request
-                request.headers = (request.headers ?: emptyMap()) + mapOf("X-Test-Header" to "test-value")
-                return request
             }
-
-            override fun <T : Any> processResponse(
-                response: Response<T>,
-                request: APIGatewayProxyRequestEvent
-            ): Response<T> {
-                // Add a custom header to the response
-                return response.copy(headers = response.headers + mapOf("X-Response-Header" to "response-value"))
-            }
-        })
+        }
 
         val handler = LambdaRequestHandler()
         handler.router = router

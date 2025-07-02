@@ -172,6 +172,16 @@ class Router internal constructor() {
         middlewares.addAll(middlewareList)
         return this
     }
+
+    /**
+     * Add a middleware to the router, designed to be used within the lambdaRouter block
+     * @param middleware The middleware to add
+     * @return The router instance for method chaining
+     */
+    fun using(middleware: Middleware): Router {
+        middlewares.add(middleware)
+        return this
+    }
 }
 
 /**
