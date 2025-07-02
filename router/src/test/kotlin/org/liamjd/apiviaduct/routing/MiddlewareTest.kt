@@ -1,11 +1,12 @@
 package org.liamjd.apiviaduct.routing
 
-import com.amazonaws.services.lambda.runtime.Context
-import com.amazonaws.services.lambda.runtime.CognitoIdentity
 import com.amazonaws.services.lambda.runtime.ClientContext
+import com.amazonaws.services.lambda.runtime.CognitoIdentity
+import com.amazonaws.services.lambda.runtime.Context
 import com.amazonaws.services.lambda.runtime.LambdaLogger
 import com.amazonaws.services.lambda.runtime.events.APIGatewayProxyRequestEvent
-import org.junit.jupiter.api.Assertions.*
+import org.junit.jupiter.api.Assertions.assertEquals
+import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.Test
 
 /**
@@ -105,21 +106,22 @@ class MiddlewareTest {
     fun `test middleware can modify request and response`() {
         // Given
         val router = lambdaRouter {
-            get<Unit, String>("/test") { request ->
+            get("/test", { request: Request<Unit> ->
                 // Check if the header was added by the middleware
                 val headerValue = request.headers["X-Test-Header"]
                 Response.ok(body = "Header value: $headerValue")
-            }
-        }
-
-        router.middleware(object : Middleware {
+            })
+        }.middleware(object : Middleware {
             override fun processRequest(request: APIGatewayProxyRequestEvent): APIGatewayProxyRequestEvent {
                 // Add a custom header to the request
                 request.headers = (request.headers ?: emptyMap()) + mapOf("X-Test-Header" to "test-value")
                 return request
             }
 
-            override fun <T : Any> processResponse(response: Response<T>, request: APIGatewayProxyRequestEvent): Response<T> {
+            override fun <T : Any> processResponse(
+                response: Response<T>,
+                request: APIGatewayProxyRequestEvent
+            ): Response<T> {
                 // Add a custom header to the response
                 return response.copy(headers = response.headers + mapOf("X-Response-Header" to "response-value"))
             }
@@ -168,5 +170,6 @@ class RecordingMiddleware(
  */
 class TestMiddleware(private val id: String) : Middleware {
     override fun processRequest(request: APIGatewayProxyRequestEvent): APIGatewayProxyRequestEvent = request
-    override fun <T : Any> processResponse(response: Response<T>, request: APIGatewayProxyRequestEvent): Response<T> = response
+    override fun <T : Any> processResponse(response: Response<T>, request: APIGatewayProxyRequestEvent): Response<T> =
+        response
 }
