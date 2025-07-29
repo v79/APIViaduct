@@ -1,9 +1,11 @@
 package org.liamjd.apiviaduct.routing
 
 import com.amazonaws.services.lambda.runtime.Context
+import com.amazonaws.services.lambda.runtime.LambdaLogger
 import com.amazonaws.services.lambda.runtime.RequestHandler
 import com.amazonaws.services.lambda.runtime.events.APIGatewayProxyRequestEvent
 import com.amazonaws.services.lambda.runtime.events.APIGatewayProxyResponseEvent
+import com.amazonaws.services.lambda.runtime.logging.LogLevel
 import com.charleskorn.kaml.Yaml
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.serializer
@@ -39,13 +41,17 @@ internal class LambdaRequestHandler {
     lateinit var router: Router
     var corsDomain: String = "*"
 
+    lateinit var logger: LambdaLogger
+
     fun handleRequest(input: APIGatewayProxyRequestEvent, context: Context): APIGatewayProxyResponseEvent {
-        println(
+        logger = context.logger
+        logger.log(
             "RequestHandlerWrapper: handleRequest(): looking for route which matches request ${input.httpMethod} ${input.path} <${
                 input.getHeader(
                     "Content-Type"
                 )
-            }->${input.acceptedMediaTypes()}>"
+            }->${input.acceptedMediaTypes()}>",
+            LogLevel.INFO
         )
         // TODO: Serialize the response instead
         val response: Response<out Any> = validateRoute(input)

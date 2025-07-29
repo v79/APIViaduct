@@ -196,6 +196,7 @@ internal class RouterTest {
         assertEquals(200, response.statusCode)
         assertEquals("POST: This route accepts PUT and POST", response.body)
     }
+
     @Test
     fun `returns correct response for PUT request on route that accepts both POST and PUT`() {
         val testRouter = TestRouter()
@@ -270,6 +271,32 @@ internal class RouterTest {
         assertEquals("Creating new person 'Christopher' aged 42", response.body)
     }
 
+    // controller testing
+    @Test
+    fun `returns correct response for GET request on controller route`() {
+        val testRouter = TestRouter()
+        val response = testRouter.handleRequest(APIGatewayProxyRequestEvent().apply {
+            path = "/controller/test"
+            httpMethod = "GET"
+            headers = mapOf("accept" to "text/plain")
+        }, context)
+        assertEquals(200, response.statusCode)
+        assertEquals("test", response.body)
+    }
+
+    @Test
+    fun `returns correct response for PUT request on controller route with object body`() {
+        val testRouter = TestRouter()
+        val response = testRouter.handleRequest(APIGatewayProxyRequestEvent().apply {
+            path = "/controller/putObj"
+            httpMethod = "PUT"
+            body = """{"name":"Christopher","age":42}"""
+            headers = mapOf("Content-Type" to "application/json", "accept" to "application/json")
+        }, context)
+        assertEquals(200, response.statusCode)
+        assertEquals("""{"happy":true,"favouriteColor":"Christopher's favourite colour is blue"}""", response.body)
+    }
+
     // This is a test context that can be used to test the LambdaRouter
     // The values don't matter, as long as they are not null
     class TestContext : Context {
@@ -290,7 +317,15 @@ internal class RouterTest {
         override fun getRemainingTimeInMillis() = 1000
         override fun getMemoryLimitInMB() = 512
         override fun getLogger(): LambdaLogger {
-            TODO("Not yet implemented")
+            return object : LambdaLogger {
+                override fun log(message: String) {
+                    println(message)
+                }
+
+                override fun log(message: ByteArray) {
+                    println(String(message))
+                }
+            }
         }
     }
 }
@@ -358,9 +393,27 @@ internal class TestRouter : LambdaRouter() {
 
         // path parameters
         group("/params") {
-            get("/{id}", handler = { request: Request<Unit> -> Response.ok(body = "Getting item with id=${request.pathParameters["id"]}") }).supplies(MimeType.plainText)
-            put("/new/{isbn}/book", handler = { request: Request<Unit> -> Response.ok(body = "Creating new book with ISBN=${request.pathParameters["isbn"]}") }).supplies(MimeType.plainText)
-            post("/new/{name}/{age}", handler = { request: Request<Unit> -> Response.ok(body = "Creating new person '${request.pathParameters["name"]}' aged ${request.pathParameters["age"]}") }).supplies(MimeType.plainText)
+            get(
+                "/{id}",
+                handler = { request: Request<Unit> -> Response.ok(body = "Getting item with id=${request.pathParameters["id"]}") }).supplies(
+                MimeType.plainText
+            )
+            put(
+                "/new/{isbn}/book",
+                handler = { request: Request<Unit> -> Response.ok(body = "Creating new book with ISBN=${request.pathParameters["isbn"]}") }).supplies(
+                MimeType.plainText
+            )
+            post(
+                "/new/{name}/{age}",
+                handler = { request: Request<Unit> -> Response.ok(body = "Creating new person '${request.pathParameters["name"]}' aged ${request.pathParameters["age"]}") }).supplies(
+                MimeType.plainText
+            )
+        }
+
+        // controller testing
+        group("/controller") {
+            get("/test", TestController()::testRoute).supplies(MimeType.plainText)
+            put("/putObj", TestController()::testRouteWithObject).expects(MimeType.json)
         }
     }
 }
@@ -370,3 +423,13 @@ internal class ReqObj(val name: String, val age: Int)
 
 @Serializable
 internal class RespObj(val happy: Boolean, val favouriteColor: String)
+
+internal class TestController {
+    fun testRoute(request: Request<String>): Response<String> {
+        return Response.ok("test")
+    }
+
+    fun testRouteWithObject(request: Request<ReqObj>): Response<RespObj> {
+        return Response.ok(RespObj(true, "${request.body.name}'s favourite colour is blue"))
+    }
+}

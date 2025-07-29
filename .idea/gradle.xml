@@ -10,6 +10,7 @@
           <set>
             <option value="$PROJECT_DIR$" />
             <option value="$PROJECT_DIR$/Sample" />
+            <option value="$PROJECT_DIR$/openapi" />
             <option value="$PROJECT_DIR$/router" />
           </set>
         </option>
