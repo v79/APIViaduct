@@ -7,6 +7,8 @@ RESTful routes will be defined using a Kotlin DSL, and uses Kotlinx Serializatio
 
 The library will support route grouping, authentication, all the main REST methods, and more. I hope to add an OpenAPI specification generator, and middleware our filters in the future. While the router defaults to JSON, it is possible to specify other content types such as text, YAML or any others supported by kotlinx.serialization.
 
+This library does not yet support Kotlin 2.0 because the testing libraries for the OpenAPI module do not support KSP2. See https://github.com/ZacSweers/kotlin-compile-testing/issues/340 .
+
 ## Example
 ```kotlin
   // a simple get request handler

@@ -317,7 +317,15 @@ internal class RouterTest {
         override fun getRemainingTimeInMillis() = 1000
         override fun getMemoryLimitInMB() = 512
         override fun getLogger(): LambdaLogger {
-            TODO("Not yet implemented")
+            return object : LambdaLogger {
+                override fun log(message: String) {
+                    println(message)
+                }
+
+                override fun log(message: ByteArray) {
+                    println(String(message))
+                }
+            }
         }
     }
 }

@@ -3,7 +3,7 @@ plugins {
 }
 
 group = "org.liamjd"
-version = "0.4-SNAPSHOT"
+version = "0.4.1-SNAPSHOT"
 
 repositories {
     mavenCentral()
@@ -13,6 +13,8 @@ repositories {
 
 dependencies {
     testImplementation(kotlin("test"))
+    runtimeOnly("com.amazonaws:aws-lambda-java-log4j2:1.6.0")
+
 }
 
 tasks.test {
