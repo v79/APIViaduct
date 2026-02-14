@@ -1,6 +1,6 @@
 package org.liamjd.apiviaduct.routing
 
-import kotlin.reflect.typeOf
+import kotlinx.serialization.serializer
 
 /**
  * The core routing class for the API which provides a DSL for defining routes.
@@ -39,7 +39,7 @@ class Router internal constructor() {
         val requestPredicate = defaultRequestPredicate(
             pattern = pattern, method = "POST", consuming = consumeByDefault, handler = handler
         ).also { predicate ->
-            predicate.kType = typeOf<I>()
+            predicate.inputSerializer = serializer<I>()
             routes[predicate] = RouteFunction(predicate, handler)
         }
         return requestPredicate
@@ -56,7 +56,7 @@ class Router internal constructor() {
         val requestPredicate = defaultRequestPredicate(
             pattern = pattern, method = "PUT", consuming = consumeByDefault, handler = handler
         ).also { predicate ->
-            predicate.kType = typeOf<I>()
+            predicate.inputSerializer = serializer<I>()
             routes[predicate] = RouteFunction(predicate, handler)
         }
         return requestPredicate
@@ -72,7 +72,7 @@ class Router internal constructor() {
         val requestPredicate = defaultRequestPredicate(
             pattern = pattern, method = "PATCH", consuming = consumeByDefault, handler = handler
         ).also { predicate ->
-            predicate.kType = typeOf<I>()
+            predicate.inputSerializer = serializer<I>()
             routes[predicate] = RouteFunction(predicate, handler)
         }
         return requestPredicate

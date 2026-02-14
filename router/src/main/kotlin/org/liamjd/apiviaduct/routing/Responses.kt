@@ -1,16 +1,16 @@
 package org.liamjd.apiviaduct.routing
 
+import kotlinx.serialization.KSerializer
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.Transient
-import kotlin.reflect.KType
-import kotlin.reflect.typeOf
+import kotlinx.serialization.serializer
 
 /**
  * A response object that can be returned from a route handler
  * @param statusCode the HTTP Status Code
  * @param body the object returned from the server, which could be text, an object to be serialized later, or null
  * @param headers the HTTP response headers, which should always include a Content-Type header
- * @property kType internal property to keep track of the type of the body, for serialization
+ * @property outputSerializer internal property to keep track of the serializer for the body
  */
 @Serializable
 data class Response<T : Any>(
@@ -19,15 +19,16 @@ data class Response<T : Any>(
     val headers: Map<String, String> = emptyMap(),
 ) {
     @Transient
-    var kType: KType? = null
+    var outputSerializer: KSerializer<*>? = null
 
     companion object {
         /**
          * 200 - Create a default successful response with the body and headers provided
          */
         inline fun <reified T : Any> ok(body: T? = null, headers: Map<String, String> = emptyMap()): Response<T> {
-            val tt: KType = typeOf<T>()
-            return Response(HttpCodes.OK.code, body, headers).apply { kType = tt }
+            return Response(HttpCodes.OK.code, body, headers).apply {
+                if (body != null) outputSerializer = serializer<T>()
+            }
         }
 
         /**
@@ -38,8 +39,9 @@ data class Response<T : Any>(
             body: T? = null,
             headers: Map<String, String> = emptyMap()
         ): Response<T> {
-            val tt: KType = typeOf<T>()
-            return Response(HttpCodes.ACCEPTED.code, body, headers).apply { kType = tt }
+            return Response(HttpCodes.ACCEPTED.code, body, headers).apply {
+                if (body != null) outputSerializer = serializer<T>()
+            }
         }
 
         /**
@@ -50,8 +52,9 @@ data class Response<T : Any>(
             body: T? = null,
             headers: Map<String, String> = emptyMap()
         ): Response<T> {
-            val tt: KType = typeOf<T>()
-            return Response(HttpCodes.NO_CONTENT.code, body, headers).apply { kType = tt }
+            return Response(HttpCodes.NO_CONTENT.code, body, headers).apply {
+                if (body != null) outputSerializer = serializer<T>()
+            }
         }
 
         /**
@@ -61,8 +64,9 @@ data class Response<T : Any>(
             body: T? = null,
             headers: Map<String, String> = emptyMap()
         ): Response<T> {
-            val tt: KType = typeOf<T>()
-            return Response(HttpCodes.UNAUTHORIZED.code, body, headers).apply { kType = tt }
+            return Response(HttpCodes.UNAUTHORIZED.code, body, headers).apply {
+                if (body != null) outputSerializer = serializer<T>()
+            }
         }
 
         /**
@@ -72,8 +76,9 @@ data class Response<T : Any>(
             body: T? = null,
             headers: Map<String, String> = emptyMap()
         ): Response<T> {
-            val tt: KType = typeOf<T>()
-            return Response(HttpCodes.BAD_REQUEST.code, body, headers).apply { kType = tt }
+            return Response(HttpCodes.BAD_REQUEST.code, body, headers).apply {
+                if (body != null) outputSerializer = serializer<T>()
+            }
         }
 
         /**
@@ -83,8 +88,9 @@ data class Response<T : Any>(
             body: T? = null,
             headers: Map<String, String> = emptyMap()
         ): Response<T> {
-            val tt: KType = typeOf<T>()
-            return Response(HttpCodes.NOT_FOUND.code, body, headers).apply { kType = tt }
+            return Response(HttpCodes.NOT_FOUND.code, body, headers).apply {
+                if (body != null) outputSerializer = serializer<T>()
+            }
         }
 
         /**
@@ -96,8 +102,9 @@ data class Response<T : Any>(
             body: T? = null,
             headers: Map<String, String> = emptyMap()
         ): Response<T> {
-            val tt: KType = typeOf<T>()
-            return Response(HttpCodes.METHOD_NOT_ALLOWED.code, body, headers).apply { kType = tt }
+            return Response(HttpCodes.METHOD_NOT_ALLOWED.code, body, headers).apply {
+                if (body != null) outputSerializer = serializer<T>()
+            }
         }
 
         /**
@@ -109,8 +116,9 @@ data class Response<T : Any>(
             body: T? = null,
             headers: Map<String, String> = emptyMap()
         ): Response<T> {
-            val tt: KType = typeOf<T>()
-            return Response(HttpCodes.NOT_ACCEPTABLE.code, body, headers).apply { kType = tt }
+            return Response(HttpCodes.NOT_ACCEPTABLE.code, body, headers).apply {
+                if (body != null) outputSerializer = serializer<T>()
+            }
         }
 
         /**
@@ -120,8 +128,9 @@ data class Response<T : Any>(
             body: T? = null,
             headers: Map<String, String> = emptyMap()
         ): Response<T> {
-            val tt: KType = typeOf<T>()
-            return Response(HttpCodes.CONFLICT.code, body, headers).apply { kType = tt }
+            return Response(HttpCodes.CONFLICT.code, body, headers).apply {
+                if (body != null) outputSerializer = serializer<T>()
+            }
         }
 
         /**
@@ -131,8 +140,9 @@ data class Response<T : Any>(
             body: T? = null,
             headers: Map<String, String> = emptyMap()
         ): Response<T> {
-            val tt: KType = typeOf<T>()
-            return Response(HttpCodes.SERVER_ERROR.code, body, headers).apply { kType = tt }
+            return Response(HttpCodes.SERVER_ERROR.code, body, headers).apply {
+                if (body != null) outputSerializer = serializer<T>()
+            }
         }
 
         /**
@@ -143,8 +153,9 @@ data class Response<T : Any>(
             body: T? = null,
             headers: Map<String, String> = emptyMap()
         ): Response<T> {
-            val tt: KType = typeOf<T>()
-            return Response(HttpCodes.NOT_IMPLEMENTED.code, body, headers).apply { kType = tt }
+            return Response(HttpCodes.NOT_IMPLEMENTED.code, body, headers).apply {
+                if (body != null) outputSerializer = serializer<T>()
+            }
         }
     }
 }

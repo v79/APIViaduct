@@ -1,10 +1,10 @@
 package org.liamjd.apiviaduct.routing
 
 import com.amazonaws.services.lambda.runtime.events.APIGatewayProxyRequestEvent
+import kotlinx.serialization.KSerializer
 import org.liamjd.apiviaduct.routing.extensions.acceptedMediaTypes
 import org.liamjd.apiviaduct.routing.extensions.contentType
 import java.util.*
-import kotlin.reflect.KType
 
 /**
  * A RequestPredicate is descriptor of a route set up in the router. It provides a way to match incoming requests from the AWSGatewayProxyRequest.
@@ -14,14 +14,14 @@ import kotlin.reflect.KType
  * @param produces a set of Mime Types it replies with
  * @property accepts is an alias for consumes
  * @property supplies is an alias for produces
- * @property kType is the Kotlin type of the request body, or null
+ * @property inputSerializer optional serializer for the request body
  */
 data class RequestPredicate(
     val method: String, var pathPattern: String,
     internal var consumes: Set<MimeType>,
     internal var produces: Set<MimeType>
 ) {
-    var kType: KType? = null
+    var inputSerializer: KSerializer<*>? = null
     val accepts
         get() = consumes
     val supplies

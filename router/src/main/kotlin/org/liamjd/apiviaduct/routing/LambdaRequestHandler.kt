@@ -8,11 +8,9 @@ import com.amazonaws.services.lambda.runtime.events.APIGatewayProxyResponseEvent
 import com.amazonaws.services.lambda.runtime.logging.LogLevel
 import com.charleskorn.kaml.Yaml
 import kotlinx.serialization.json.Json
-import kotlinx.serialization.serializer
 import org.liamjd.apiviaduct.routing.RouteProcessor.processRoute
 import org.liamjd.apiviaduct.routing.extensions.acceptedMediaTypes
 import org.liamjd.apiviaduct.routing.extensions.getHeader
-import kotlin.reflect.typeOf
 
 /**
  * Base class for creating a Lambda router. Your project should create an object that extends this class
@@ -145,25 +143,25 @@ internal class LambdaRequestHandler {
         val responseString = when (response.statusCode) {
             in 200..299 -> {
                 if (response.body != null) {
-                    val bodyString: String = when (mimeType) {
+                    val bodyString: String = when {
+                        // If body is already a String, just use it directly
+                        response.body is String -> response.body.toString()
+
+                        else -> when (mimeType) {
 
                         MimeType.json -> {
                             val jsonFormat = Json { prettyPrint = false; encodeDefaults = true }
-                            response.kType?.let { kType ->
-                                val kSerializer = serializer(kType)
-                                kSerializer.let {
-                                    jsonFormat.encodeToString(kSerializer, response.body)
-                                }
-                            } ?: """{ "error" : "could not get json serializer for $response" }"""
+                            response.outputSerializer?.let { serializer ->
+                                @Suppress("UNCHECKED_CAST")
+                                jsonFormat.encodeToString(serializer as kotlinx.serialization.KSerializer<Any>, response.body)
+                            } ?: response.body.toString()
                         }
 
                         MimeType.yaml -> {
-                            response.kType?.let { kType ->
-                                val kSerializer = serializer(kType)
-                                kSerializer.let {
-                                    Yaml.default.encodeToString(kSerializer, response.body)
-                                }
-                            } ?: "error: could not get yaml serializer for $response"
+                            response.outputSerializer?.let { serializer ->
+                                @Suppress("UNCHECKED_CAST")
+                                Yaml.default.encodeToString(serializer as kotlinx.serialization.KSerializer<Any>, response.body)
+                            } ?: response.body.toString()
                         }
 
                         MimeType.plainText -> {
@@ -198,6 +196,7 @@ internal class LambdaRequestHandler {
                             response.body.toString()
                         }
                     }
+                    }
                     bodyString
                 } else {
                     // return empty string for null body
@@ -207,17 +206,14 @@ internal class LambdaRequestHandler {
             }
 
             in 300..399 -> {
-                response.kType = typeOf<String>()
                 response.body?.toString() ?: ""
             }
 
             in 400..499 -> {
-                response.kType = typeOf<String>()
                 response.body?.toString() ?: ""
             }
 
             else -> {
-                response.kType = typeOf<String>()
                 response.body?.toString() ?: ""
             }
         }
@@ -286,5 +282,3 @@ internal class LambdaRequestHandler {
         return Response.notAcceptable(body = "", headers = mapOf("Content-Type" to canProvide.joinToString(",")))
     }
 }
-
-

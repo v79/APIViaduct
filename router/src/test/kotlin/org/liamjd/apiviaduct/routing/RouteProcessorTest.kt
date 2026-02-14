@@ -2,6 +2,7 @@ package org.liamjd.apiviaduct.routing
 
 import com.amazonaws.services.lambda.runtime.events.APIGatewayProxyRequestEvent
 import kotlinx.serialization.Serializable
+import kotlinx.serialization.serializer
 import kotlin.reflect.typeOf
 import kotlin.test.Test
 import kotlin.test.assertEquals
@@ -25,7 +26,7 @@ class RouteProcessorTest {
         )
         val response = RouteProcessor.processRoute(input, handlerFunction)
         assertEquals(400, response.statusCode)
-        assertEquals("No type information for handler function", response.body)
+        assertEquals("No serializer for handler function", response.body)
     }
 
     @Test
@@ -63,7 +64,7 @@ class RouteProcessorTest {
             ),
             handler = { request: Request<SimpleObject> -> Response.ok(request.body) }
         )
-        handlerFunction.predicate.kType = typeOf<SimpleObject>()
+        handlerFunction.predicate.inputSerializer = serializer<SimpleObject>()
         val response = RouteProcessor.processRoute(input, handlerFunction)
         assertEquals(200, response.statusCode)
         assertEquals("test", (response.body as SimpleObject).name)
@@ -87,7 +88,7 @@ class RouteProcessorTest {
             ),
             handler = { request: Request<SimpleObject> -> Response.ok(request.body) }
         )
-        handlerFunction.predicate.kType = typeOf<SimpleObject>()
+        handlerFunction.predicate.inputSerializer = serializer<SimpleObject>()
         val response = RouteProcessor.processRoute(input, handlerFunction)
         assertEquals(200, response.statusCode)
         assertEquals("test", (response.body as SimpleObject).name)
@@ -110,7 +111,7 @@ class RouteProcessorTest {
             ),
             handler = { request: Request<SimpleObject> -> Response.ok(request.body) }
         )
-        handlerFunction.predicate.kType = typeOf<SimpleObject>()
+        handlerFunction.predicate.inputSerializer = serializer<SimpleObject>()
         val response = RouteProcessor.processRoute(input, handlerFunction)
         assertEquals(400, response.statusCode)
         assert((response.body as String).startsWith("Invalid request"))
@@ -132,7 +133,7 @@ class RouteProcessorTest {
             ),
             handler = { request: Request<SimpleObject> -> Response.ok(request.body) }
         )
-        handlerFunction.predicate.kType = typeOf<SimpleObject>()
+        handlerFunction.predicate.inputSerializer = serializer<SimpleObject>()
         val response = RouteProcessor.processRoute(input, handlerFunction)
         assertEquals(400, response.statusCode)
         assert((response.body as String).startsWith("Could not deserialize body."))
@@ -155,7 +156,7 @@ class RouteProcessorTest {
             ),
             handler = { _: Any -> Response.ok("test") }
         )
-        handlerFunction.predicate.kType = typeOf<String>()
+        handlerFunction.predicate.inputSerializer = serializer<String>()
         val response = RouteProcessor.processRoute(input, handlerFunction)
         assertEquals(200, response.statusCode)
         assertEquals("test", response.body)
