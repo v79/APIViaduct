@@ -6,7 +6,6 @@ import kotlinx.serialization.ExperimentalSerializationApi
 import kotlinx.serialization.MissingFieldException
 import kotlinx.serialization.SerializationException
 import kotlinx.serialization.json.Json
-import kotlinx.serialization.serializer
 import org.liamjd.apiviaduct.routing.extensions.getHeader
 
 /**
@@ -37,23 +36,25 @@ object RouteProcessor {
         // a message body could exist for GET requests, but the body will be ignored
         when (input.httpMethod) {
             "POST", "PUT", "PATCH" -> {
-                val kType = handlerFunction.predicate.kType
-                if (kType == null) {
-                    return Response.badRequest(body = "No type information for handler function")
+                val inputSerializer = handlerFunction.predicate.inputSerializer
+                if (inputSerializer == null) {
+                    return Response.badRequest(body = "No serializer for handler function")
                 } else {
                     return try {
                         val contentType = input.getHeader("Content-Type")
                         val contentLength = input.getHeader("Content-Length")
-                        println("Processing route: Converting $contentType to ${kType}. Deserializing...")
+                        println("Processing route: Converting $contentType with serializer. Deserializing...")
+                        @Suppress("UNCHECKED_CAST")
+                        val typedSerializer = inputSerializer as kotlinx.serialization.KSerializer<Any>
                         val bodyObject =
                             if (contentLength == "0") ""
                             else if (contentType != null) when (MimeType.parse(contentType)) {
                                 MimeType.json -> {
-                                    Json.decodeFromString(serializer(kType), input.body)
+                                    Json.decodeFromString(typedSerializer, input.body)
                                 }
 
                                 MimeType.yaml -> {
-                                    Yaml.default.decodeFromString(serializer(kType), input.body)
+                                    Yaml.default.decodeFromString(typedSerializer, input.body)
                                 }
 
                                 else -> {
