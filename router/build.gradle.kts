@@ -1,7 +1,8 @@
 plugins {
     kotlin("jvm")
-    kotlin("plugin.serialization") version "1.9.20"
+    kotlin("plugin.serialization") version "1.9.23"
     id("org.jetbrains.kotlinx.kover") version "0.8.0"
+    id("org.graalvm.buildtools.native") version "0.10.4"
     `maven-publish`
 }
 
@@ -37,6 +38,17 @@ dependencies {
 
 tasks.test {
     useJUnitPlatform()
+}
+
+// The library has no main class, so no "main" native binary is configured here.
+// The plugin provides the :router:nativeTest task, which compiles the test suite
+// to a native executable and runs it — the primary way to validate native-image
+// compatibility. Requires a GraalVM JDK (see .github/workflows/native-image.yml).
+graalvmNative {
+    testSupport.set(true)
+    binaries.all {
+        buildArgs.add("--no-fallback")
+    }
 }
 kotlin {
     jvmToolchain(17)

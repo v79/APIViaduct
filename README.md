@@ -1,7 +1,7 @@
 # APIViaduct
 A serverless RESTful API and router written in Kotlin for AWS Lambda
 
-Inspired by my earlier project [Cantilever](https://www.cantilevers.org/), I wanted to create a more lightweight and flexible API framework for AWS Lambda. This project is a work in progress and is not yet ready for production use. This project will currently run on the JVM, and so has the inherent cold start issues of Java on AWS Lambda. I may explore GraalVM in the future as an alternative.
+Inspired by my earlier project [Cantilever](https://www.cantilevers.org/), I wanted to create a more lightweight and flexible API framework for AWS Lambda. This project is a work in progress and is not yet ready for production use. This project will currently run on the JVM, and so has the inherent cold start issues of Java on AWS Lambda. Work is underway to make the library compatible with GraalVM native image compilation — see [GRAALVM_RECOMMENDATIONS.md](GRAALVM_RECOMMENDATIONS.md) for the current state and [GRAALVM_CONSUMER_GUIDE.md](GRAALVM_CONSUMER_GUIDE.md) for how to build a native Lambda with the library.
 
 RESTful routes will be defined using a Kotlin DSL, and uses Kotlinx Serialization for JSON (de)serialization. The project is built using Gradle and the AWS SDK for Kotlin.
 
