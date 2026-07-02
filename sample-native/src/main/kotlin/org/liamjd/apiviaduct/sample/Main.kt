@@ -81,6 +81,16 @@ private fun selfTest() {
             200
         ),
         Triple(
+            "GET /person/{name} with curl's default Accept: */*",
+            """{"path": "/person/Liam", "httpMethod": "GET", "headers": {"accept": "*/*"}}""",
+            200
+        ),
+        Triple(
+            "POST /person with curl's default Accept: */*",
+            """{"path": "/person", "httpMethod": "POST", "headers": {"accept": "*/*", "content-type": "application/json"}, "body": "{\"name\": \"Christopher\", \"age\": 42}"}""",
+            200
+        ),
+        Triple(
             "404 for unknown route",
             """{"path": "/nowhere", "httpMethod": "GET", "headers": {"accept": "text/plain"}}""",
             404

@@ -52,18 +52,25 @@ internal class LambdaRequestHandler {
             LogLevel.INFO
         )
         // TODO: Serialize the response instead
-        val response: Response<out Any> = validateRoute(input)
+        val (response, negotiatedType) = validateRoute(input)
 
-        val apiGatewayResponse = serializeResponse(response, input.acceptedMediaTypes().first(), corsDomain)
+        // Prefer the mime type negotiated with the matched route; a raw accepted type such
+        // as the */* wildcard (curl's default) must never become the response Content-Type
+        val responseType = negotiatedType
+            ?: input.acceptedMediaTypes().firstOrNull { !it.isWild }
+            ?: MimeType.plainText
+
+        val apiGatewayResponse = serializeResponse(response, responseType, corsDomain)
         return apiGatewayResponse
     }
 
     /**
      * Validate the route, checking the method, path, and accept headers to find a matching handler function
      * @param input the APIGatewayProxyRequestEvent from AWS
-     * @return a Response<Any> object, which may be an error response
+     * @return a Response<Any> object, which may be an error response, paired with the mime type
+     * negotiated with the matched route (null when no route was matched)
      */
-    private fun validateRoute(input: APIGatewayProxyRequestEvent): Response<out Any> {
+    private fun validateRoute(input: APIGatewayProxyRequestEvent): Pair<Response<out Any>, MimeType?> {
         var routeFound = false
         // find all the routes which match the path
         router.routes.filter { matchPath(input, it.value) }.entries.forEach { route ->
@@ -73,6 +80,10 @@ internal class LambdaRequestHandler {
             if (route.key.methodMatches(input)) {
                 // now check if the accept and content types match
                 if (route.key.acceptMatches(input, route.key.produces)) {
+                    // resolve what the response type will be: the first of the route's declared
+                    // produces types which is compatible with what the request accepts
+                    val negotiatedType = route.key.matchedAcceptType(input.acceptedMediaTypes())
+                        ?: route.key.produces.firstOrNull()
                     // all good, process the route
                     // TODO: Add Authentication here
                     if (route.value.authorizer.type != AuthType.NONE) {
@@ -81,24 +92,24 @@ internal class LambdaRequestHandler {
                             return Response.unauthorized(
                                 body = authResult.message,
                                 headers = mapOf("Content-Type" to MimeType.plainText.toString())
-                            )
+                            ) to null
                         }
                     }
                     // TODO: Add filters here?
-                    return processRoute(input, route.value)
+                    return processRoute(input, route.value) to negotiatedType
                 } else {
                     // accept doesn't match, return 406
                     println("Route $input.path cannot provide requested content type (${input.acceptedMediaTypes()})")
-                    return createNotAcceptableResponse(input.httpMethod, input.path, route.key.produces)
+                    return createNotAcceptableResponse(input.httpMethod, input.path, route.key.produces) to null
                 }
             }
         }
         // I want to 405 if the route exists but the method is wrong
         if (routeFound) {
-            return createMethodNotAllowedResponse(input.httpMethod, input.path)
+            return createMethodNotAllowedResponse(input.httpMethod, input.path) to null
         }
         // we have exhausted all routes, return 404
-        return createNoMatchingRouteResponse(input.httpMethod, input.path, input.acceptedMediaTypes())
+        return createNoMatchingRouteResponse(input.httpMethod, input.path, input.acceptedMediaTypes()) to null
     }
 
     /**

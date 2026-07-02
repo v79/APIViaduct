@@ -82,7 +82,7 @@ data class RequestPredicate(
         return when {
             produces.isEmpty() && request.acceptedMediaTypes().isEmpty() -> true
             else -> produces.firstOrNull {
-                request.acceptedMediaTypes().any { acceptedType -> it == acceptedType }
+                request.acceptedMediaTypes().any { acceptedType -> it.isCompatibleWith(acceptedType) }
             } != null
         }
     }

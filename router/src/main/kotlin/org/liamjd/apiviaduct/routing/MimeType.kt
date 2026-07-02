@@ -16,13 +16,21 @@ data class MimeType(val type: String, val subType: String) {
 
     override fun toString() = "$type/$subType"
 
+    /**
+     * True if this mime type contains a wildcard, e.g. the whole-type wildcard or "image/&#42;"
+     */
+    val isWild: Boolean
+        get() = type == "*" || subType == "*"
+
     // TODO : this is just scratching the surface of the requirements around mimetypes
-    fun isCompatibleWith(other: MimeType): Boolean =
-        if (this == other) {
-            true
-        } else {
-            type == other.type && (subType.contains("+")) && other.subType.contains("+")
-        }
+    fun isCompatibleWith(other: MimeType): Boolean = when {
+        this == other -> true
+        // wildcards, as sent in Accept headers; curl and browsers send a whole-type wildcard by default
+        type == "*" && subType == "*" -> true
+        other.type == "*" && other.subType == "*" -> true
+        type == other.type && (subType == "*" || other.subType == "*") -> true
+        else -> type == other.type && subType.contains("+") && other.subType.contains("+")
+    }
 
 
     /** Constant definitions for the various mime types */
@@ -46,13 +54,18 @@ data class MimeType(val type: String, val subType: String) {
         val webp = MimeType("image", "webp")
 
         /**
-         * Parse a string into a MimeType object
-         * @param string the string to parse, e.g. "text/html"
+         * Parse a string into a MimeType object, ignoring any parameters
+         * @param string the string to parse, e.g. "text/html" or "application/xml;q=0.9"
          * @return a MimeType object
          */
         fun parse(string: String): MimeType {
-            val parts = string.split('/')
-            return MimeType(parts[0].lowercase(), parts[1].lowercase())
+            val parts = string.substringBefore(';').trim().split('/')
+            return if (parts.size >= 2) {
+                MimeType(parts[0].lowercase(), parts[1].lowercase())
+            } else {
+                // a bare type with no subtype, e.g. "*" — treat the subtype as a wildcard
+                MimeType(parts[0].lowercase(), "*")
+            }
         }
     }
 }
