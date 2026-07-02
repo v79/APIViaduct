@@ -427,7 +427,7 @@ The `openapi` module's Kotlin version can remain at 1.9.x independently.
 | 8 | Document consumer build requirements (bootstrap binary, ZIP packaging) | Low | ✅ Done — `GRAALVM_CONSUMER_GUIDE.md` |
 | 9 | Run and validate native image tests | Medium | ✅ Done — 40/40 tests pass in the native image |
 | new | Remove `aws.sdk.kotlin:lambda` if unused (drags OkHttp 5 alpha + Gson into images) | Low | ⏳ Open |
-| new | End-to-end proof: minimal consumer Lambda, `nativeCompile`, real API Gateway payload | Medium | ⏳ Open |
+| new | End-to-end proof: minimal consumer Lambda, `nativeCompile`, real API Gateway payload | Medium | ✅ Done locally (2026-07-02) — `sample-native/` compiles to a 40 MB `bootstrap` binary; real API Gateway JSON deserialized via a Jackson-free kotlinx bridge, 4/4 self-test cases pass in ~6 ms. Actual AWS deployment still untested |
 
 ~~The Jackson problem (items 1 and 2) is the gating issue.~~ **Revised:** the
 library itself is now demonstrably native-image compatible. The remaining work is
