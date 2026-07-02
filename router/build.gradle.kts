@@ -48,6 +48,11 @@ graalvmNative {
     testSupport.set(true)
     binaries.all {
         buildArgs.add("--no-fallback")
+        // The JUnit platform native feature touches Kotlin annotation classes
+        // during image build, which conflicts with the run-time initialization
+        // requested by other libraries' metadata. The Kotlin stdlib is safe to
+        // initialize at build time.
+        buildArgs.add("--initialize-at-build-time=kotlin")
     }
 }
 kotlin {
