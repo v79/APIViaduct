@@ -5,7 +5,7 @@ plugins {
 }
 
 group = "org.liamjd.apiviaduct"
-version = "0.5.0-SNAPSHOT"
+version = "0.5.1-SNAPSHOT"
 
 repositories {
     mavenCentral()
