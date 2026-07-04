@@ -9,6 +9,8 @@ build/
 .idea/jarRepositories.xml
 .idea/compiler.xml
 .idea/libraries/
+# AWS Toolkit plugin state (per-user profile/region, not project config)
+.idea/awsToolkit.xml
 *.iws
 *.iml
 *.ipr
