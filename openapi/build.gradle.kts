@@ -12,12 +12,12 @@ repositories {
 }
 
 dependencies {
-    // KSP
-    implementation("com.google.devtools.ksp:symbol-processing-api:1.9.20-1.0.14")
+    // KSP (kept on the Kotlin 1.9.23 line; KSP2 blocked by kotlin-compile-testing)
+    implementation("com.google.devtools.ksp:symbol-processing-api:1.9.23-1.0.20")
 
 
     testImplementation(kotlin("test"))
-    testImplementation("com.github.tschuchortdev:kotlin-compile-testing:1.5.0")
+    testImplementation("com.github.tschuchortdev:kotlin-compile-testing:1.6.0")
     testImplementation("com.github.tschuchortdev:kotlin-compile-testing-ksp:1.6.0")
 }
 
@@ -26,7 +26,7 @@ tasks.test {
 }
 
 kotlin {
-    jvmToolchain(17)
+    jvmToolchain(21)
 }
 
 publishing {

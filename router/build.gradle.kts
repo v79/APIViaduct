@@ -1,8 +1,8 @@
 plugins {
     kotlin("jvm")
     kotlin("plugin.serialization") version "1.9.23"
-    id("org.jetbrains.kotlinx.kover") version "0.8.0"
-    id("org.graalvm.buildtools.native") version "0.10.4"
+    id("org.jetbrains.kotlinx.kover") version "0.9.8"
+    id("org.graalvm.buildtools.native") version "0.10.6"
     `maven-publish`
 }
 
@@ -21,8 +21,8 @@ dependencies {
     implementation("com.charleskorn.kaml:kaml:0.59.0")
 
     // aws lambda functions
-    implementation("com.amazonaws:aws-lambda-java-core:1.2.3")
-    implementation("com.amazonaws:aws-lambda-java-events:3.11.5")
+    implementation("com.amazonaws:aws-lambda-java-core:1.4.0")
+    implementation("com.amazonaws:aws-lambda-java-events:3.16.1")
 
     testImplementation(kotlin("test"))
 }
@@ -47,7 +47,7 @@ graalvmNative {
     }
 }
 kotlin {
-    jvmToolchain(17)
+    jvmToolchain(21)
 }
 
 publishing {
