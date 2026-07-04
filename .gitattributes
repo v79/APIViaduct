@@ -1,0 +1,9 @@
+# Normalize all text files to LF in the repository
+* text=auto
+
+# Shell scripts must always check out with LF, even on Windows
+gradlew text eol=lf
+*.sh text eol=lf
+
+# Windows batch files must always check out with CRLF
+*.bat text eol=crlf
