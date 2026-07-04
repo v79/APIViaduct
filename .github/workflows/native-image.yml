@@ -1,17 +1,11 @@
 name: Native Image Tests
 
-# workflow_dispatch only becomes available once this file is on the default
-# branch, so the workflow also triggers on pushes to the GraalVM evaluation
-# branch. Native tests are expected to fail until the Jackson-dependent
-# libraries (aws-lambda-java-events, auth0) are replaced. Once merged to main
-# and the blockers are resolved, replace the branch trigger with a general
-# push/pull_request trigger.
 on:
   workflow_dispatch:
   push:
     branches:
-      - 'claude/graalvm-evaluation-*'
-      - '*graalvm*'
+      - main
+  pull_request:
 
 permissions:
   contents: read

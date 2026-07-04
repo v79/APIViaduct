@@ -1,2 +1,2 @@
 ## API Viaduct Router Module
-This is the core module of the API Viaduct project. It is a serverless RESTful API and router written in Kotlin for AWS Lambda. The project is built using Gradle and the AWS SDK for Kotlin.
+This is the core module of the API Viaduct project. It is a serverless RESTful API and router written in Kotlin for AWS Lambda. The project is built using Gradle and the AWS SDK for Kotlin. It is built as GraalVM native image so applications consuming this library must also be built with GraalVM.

@@ -54,7 +54,7 @@ Key pieces:
 
 ### `sample-native` — a standalone consumer sample (not part of the root build)
 
-Proves the GraalVM path end-to-end: a `LambdaRouter` subclass compiled with `nativeCompile` into a `bootstrap` binary for the Lambda `provided.al2023` custom runtime (deployed successfully to AWS). `Main.kt` implements the Lambda custom runtime event loop (polls the Runtime API when `AWS_LAMBDA_RUNTIME_API` is set; runs a built-in self-test otherwise). `EventJson.kt` is a Jackson-free bridge: hand-rolled `@Serializable` DTOs deserialize the API Gateway JSON and copy fields into the AWS event classes. `infra/` holds a minimal OpenTofu/Terraform deployment.
+Proves the GraalVM path end-to-end: a `LambdaRouter` subclass compiled with `nativeCompile` into a `bootstrap` binary for the Lambda `provided.al2023` custom runtime (deployed successfully to AWS). `Main.kt` implements the Lambda custom runtime event loop (polls the Runtime API when `AWS_LAMBDA_RUNTIME_API` is set; runs a built-in self-test otherwise). `EventJson.kt` is a Jackson-free bridge: hand-rolled `@Serializable` DTOs deserialize the API Gateway JSON and copy fields into the AWS event classes. `CognitoAuthorizer.kt` secures `/secure/hello` via the `auth { }` DSL by validating Cognito access tokens the same Jackson-free way (kotlinx.serialization + JDK crypto for RS256, JWKS fetched over HTTPS and cached) — proven end-to-end on AWS in the native image, with no reflection config needed. `infra/` holds a minimal OpenTofu/Terraform deployment including the Cognito user pool, client, and test user (password supplied at apply time via `-var test_user_password=…`).
 
 ### `openapi` — a KSP annotation processor (`org.liamjd.apiviaduct.schema`)
 

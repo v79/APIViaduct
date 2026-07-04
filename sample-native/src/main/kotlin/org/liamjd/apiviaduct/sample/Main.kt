@@ -94,6 +94,16 @@ private fun selfTest() {
             "404 for unknown route",
             """{"path": "/nowhere", "httpMethod": "GET", "headers": {"accept": "text/plain"}}""",
             404
+        ),
+        Triple(
+            "401 for the secure route without a token",
+            """{"path": "/secure/hello", "httpMethod": "GET", "headers": {"accept": "text/plain"}}""",
+            401
+        ),
+        Triple(
+            "401 for the secure route with a garbage token",
+            """{"path": "/secure/hello", "httpMethod": "GET", "headers": {"accept": "text/plain", "authorization": "Bearer not.a.jwt"}}""",
+            401
         )
     )
 

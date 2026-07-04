@@ -82,6 +82,19 @@ automatically. Your project must additionally register:
   used in request/response bodies do **not** need registration — kotlinx.serialization
   generates their serializers at compile time.
 
+In practice custom authorizers have not needed reflection registration: the
+`sample-native` project's `CognitoAuthorizer` (a Jackson-free Cognito JWT validator
+using kotlinx.serialization and JDK crypto) runs in a native image on Lambda with no
+`reflect-config.json` entry at all.
+
+An authorizer that fetches keys over HTTPS (as `CognitoAuthorizer` does for JWKS)
+does need the `https` URL protocol enabled in the image — add it to your own
+`buildArgs`, since the library no longer enables it for you:
+
+```kotlin
+buildArgs.add("--enable-url-protocols=https")
+```
+
 If the native binary fails at runtime with `ClassNotFoundException` or
 `MissingReflectionRegistrationError`, run your test suite with the native-image
 agent to generate the missing configuration:

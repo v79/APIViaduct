@@ -92,12 +92,19 @@ deserialization.
 
 ## 3. Auth0 Libraries Are Also Jackson-Dependent
 
-> **⏳ OPEN (2026-07-02):** still unresolved, but note the native test suite links
-> and passes with the Auth0 libraries on the classpath — only the Basic auth path
-> was exercised at runtime. The JWT/JWKS path (Jackson parsing, HTTPS key fetch)
-> has not yet run inside a native image; a native test exercising JWT auth would
-> surface the actual reflection requirements. The library metadata already adds
-> `--enable-url-protocols=https` for the JWKS fetch.
+> **⏳ OPEN for Auth0 itself, but the alternative is proven (2026-07-04):** the
+> sample-native project now validates real AWS Cognito access tokens inside a
+> native image on Lambda, end-to-end — Bearer JWT parsed, claims checked, JWKS
+> fetched **over HTTPS** and the RS256 signature verified, all with a hand-rolled
+> Jackson-free authorizer (`sample-native/.../CognitoAuthorizer.kt`:
+> kotlinx.serialization + JDK crypto, no Auth0 involvement). Two consequences:
+>
+> - The router's shipped `--enable-url-protocols=https` metadata is confirmed to
+>   reach consumer native images and enable the JWKS fetch. No reflect-config was
+>   needed for the custom authorizer.
+> - The Auth0 (`java-jwt`/`jwks-rsa`) Jackson question itself remains untested in
+>   a native image. Given the hand-rolled path works in ~120 lines, consider
+>   whether the router should keep the Auth0 dependencies at all.
 
 ```kotlin
 implementation("com.auth0:java-jwt:4.4.0")

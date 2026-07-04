@@ -25,5 +25,21 @@ class SampleRouter : LambdaRouter() {
         post("/person") { req: Request<Person> ->
             Response.ok(body = Greeting(message = "Welcome, ${req.body.name}", person = req.body))
         }
+        auth(cognitoAuthorizerFromEnv()) {
+            get("/secure/hello") { _: Request<Unit> ->
+                Response.ok(body = "Hello, authenticated caller!")
+            }.supplies(MimeType.plainText)
+        }
     }
 }
+
+/**
+ * The Cognito pool details are injected by the OpenTofu deployment (see infra/main.tf).
+ * The local self-test runs without them: the placeholder issuer can never match a real
+ * token, and the self-test only sends requests that are rejected before any JWKS fetch.
+ */
+private fun cognitoAuthorizerFromEnv() = CognitoAuthorizer(
+    region = System.getenv("COGNITO_REGION") ?: "local",
+    userPoolId = System.getenv("COGNITO_USER_POOL_ID") ?: "local-pool",
+    clientId = System.getenv("COGNITO_CLIENT_ID")
+)

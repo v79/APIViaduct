@@ -15,7 +15,7 @@ repositories {
 }
 
 dependencies {
-    implementation("org.liamjd.apiviaduct:router:0.5.1-SNAPSHOT")
+    implementation("org.liamjd.apiviaduct:router:0.6.1-SNAPSHOT")
 
     // The router declares these as implementation dependencies, so a consumer
     // that references the AWS event classes directly must declare them itself
@@ -41,8 +41,9 @@ graalvmNative {
             imageName.set("bootstrap")
             buildArgs.add("--no-fallback")
             buildArgs.add("--initialize-at-build-time=kotlin")
-            // http for the Lambda Runtime API loop (it is plain http inside the sandbox)
-            buildArgs.add("--enable-url-protocols=http")
+            // http for the Lambda Runtime API loop (plain http inside the sandbox);
+            // https for the CognitoAuthorizer's JWKS fetch
+            buildArgs.add("--enable-url-protocols=http,https")
             buildArgs.add("-H:+ReportExceptionStackTraces")
         }
     }

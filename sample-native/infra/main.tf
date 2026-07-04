@@ -32,6 +32,12 @@ variable "function_name" {
   default     = "apiviaduct-sample-native"
 }
 
+variable "test_user_password" {
+  description = "Password for the Cognito test user; supply at apply time, never committed"
+  type        = string
+  sensitive   = true
+}
+
 provider "aws" {
   region = var.region
 }
@@ -71,6 +77,41 @@ resource "aws_lambda_function" "sample" {
 
   memory_size = 256
   timeout     = 10
+
+  environment {
+    variables = {
+      COGNITO_REGION       = var.region
+      COGNITO_USER_POOL_ID = aws_cognito_user_pool.pool.id
+      COGNITO_CLIENT_ID    = aws_cognito_user_pool_client.client.id
+    }
+  }
+}
+
+# --- Cognito: a minimal closed user pool for testing the secure route ---
+
+resource "aws_cognito_user_pool" "pool" {
+  name = "${var.function_name}-pool"
+
+  admin_create_user_config {
+    allow_admin_create_user_only = true
+  }
+}
+
+resource "aws_cognito_user_pool_client" "client" {
+  name            = "${var.function_name}-client"
+  user_pool_id    = aws_cognito_user_pool.pool.id
+  generate_secret = false
+
+  explicit_auth_flows = [
+    "ALLOW_USER_PASSWORD_AUTH",
+    "ALLOW_REFRESH_TOKEN_AUTH",
+  ]
+}
+
+resource "aws_cognito_user" "test_user" {
+  user_pool_id = aws_cognito_user_pool.pool.id
+  username     = "testuser"
+  password     = var.test_user_password
 }
 
 resource "aws_apigatewayv2_api" "http_api" {
@@ -116,5 +157,26 @@ output "example_requests" {
     "curl -H 'Accept: text/plain' ${aws_apigatewayv2_api.http_api.api_endpoint}/hello",
     "curl ${aws_apigatewayv2_api.http_api.api_endpoint}/person/Liam",
     "curl -X POST -H 'Content-Type: application/json' -d '{\"name\": \"Christopher\", \"age\": 42}' ${aws_apigatewayv2_api.http_api.api_endpoint}/person",
+  ]
+}
+
+output "cognito_user_pool_id" {
+  value = aws_cognito_user_pool.pool.id
+}
+
+output "cognito_client_id" {
+  value = aws_cognito_user_pool_client.client.id
+}
+
+output "get_token_command" {
+  description = "Fetch an access token for the test user (substitute the password used at apply time)"
+  value       = "aws cognito-idp initiate-auth --auth-flow USER_PASSWORD_AUTH --client-id ${aws_cognito_user_pool_client.client.id} --auth-parameters USERNAME=testuser,PASSWORD=<password> --region ${var.region} --query 'AuthenticationResult.AccessToken' --output text"
+}
+
+output "secure_route_examples" {
+  description = "The secure route: 401 without a token, 200 with one"
+  value = [
+    "curl -i -H 'Accept: text/plain' ${aws_apigatewayv2_api.http_api.api_endpoint}/secure/hello",
+    "curl -H 'Accept: text/plain' -H \"Authorization: Bearer $TOKEN\" ${aws_apigatewayv2_api.http_api.api_endpoint}/secure/hello",
   ]
 }
