@@ -27,6 +27,46 @@ internal class RouterTest {
     }
 
     @Test
+    fun `returns 200 for GET request with wildcard accept header`() {
+        // curl and browsers send Accept: */* by default
+        val testRouter = TestRouter()
+        val response = testRouter.handleRequest(APIGatewayProxyRequestEvent().apply {
+            path = "/test"
+            httpMethod = "GET"
+            headers = mapOf("accept" to "*/*")
+        }, context)
+        assertEquals(200, response.statusCode)
+        // the response type must be the route's declared type, never the wildcard itself
+        assertEquals("application/json", response.headers["Content-Type"])
+    }
+
+    @Test
+    fun `returns 200 for GET request with browser-style accept header with quality parameters`() {
+        val testRouter = TestRouter()
+        val response = testRouter.handleRequest(APIGatewayProxyRequestEvent().apply {
+            path = "/getText"
+            httpMethod = "GET"
+            headers = mapOf("accept" to "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8")
+        }, context)
+        assertEquals(200, response.statusCode)
+        assertEquals("text/plain", response.headers["Content-Type"])
+    }
+
+    @Test
+    fun `returns 200 for POST request with object body and wildcard accept header`() {
+        val testRouter = TestRouter()
+        val response = testRouter.handleRequest(APIGatewayProxyRequestEvent().apply {
+            path = "/postObj"
+            httpMethod = "POST"
+            headers = mapOf("accept" to "*/*", "content-type" to "application/json; charset=UTF-8")
+            body = """{"name": "Christopher", "age": 42}"""
+        }, context)
+        assertEquals(200, response.statusCode)
+        assertEquals("application/json", response.headers["Content-Type"])
+        assertEquals("""{"happy":true,"favouriteColor":"Christopher's favourite colour is blue"}""", response.body)
+    }
+
+    @Test
     fun `returns a 404 for a route that doesn't exist`() {
         val testRouter = TestRouter()
         val response = testRouter.handleRequest(APIGatewayProxyRequestEvent().apply {

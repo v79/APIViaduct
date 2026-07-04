@@ -3,7 +3,7 @@ plugins {
 }
 
 group = "org.liamjd.apiviaduct"
-version = "0.5.0-SNAPSHOT"
+version = "0.6.1-SNAPSHOT"
 
 repositories {
     mavenCentral()
@@ -13,8 +13,6 @@ repositories {
 
 dependencies {
     testImplementation(kotlin("test"))
-    runtimeOnly("com.amazonaws:aws-lambda-java-log4j2:1.6.0")
-
 }
 
 tasks.test {

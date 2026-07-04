@@ -15,15 +15,25 @@ APIViaduct is a Kotlin library for building serverless RESTful APIs on AWS Lambd
 ./gradlew :router:test --tests "org.liamjd.apiviaduct.routing.RouterTest"                 # single test class
 ./gradlew :router:test --tests "org.liamjd.apiviaduct.routing.RouterTest.testMethodName"  # single test method
 ./gradlew :router:koverHtmlReport   # coverage report (router module only)
+./gradlew :router:nativeTest    # run router tests as a GraalVM native image (requires a GraalVM JDK 21+; CI runs this in native-image.yml)
 ./gradlew publish               # publish to GitHub Packages (CI does this on v* tags)
 ```
 
-JVM toolchain 17. Version (`0.5.0-SNAPSHOT`) is declared separately in the root, `router/`, and `openapi/` build.gradle.kts files — bump all three together.
+JVM toolchain 17. Version (`0.5.1-SNAPSHOT`) is declared separately in the root, `router/`, and `openapi/` build.gradle.kts files — bump all three together.
+
+The `sample-native/` project is a **standalone Gradle build**, deliberately not included in the root settings.gradle.kts (a sample inside the main build previously confused Gradle). It consumes the router from mavenLocal:
+
+```bash
+./gradlew :router:publishToMavenLocal
+cd sample-native
+../gradlew nativeCompile            # native binary (requires GraalVM JDK)
+../gradlew buildNativeLambdaZip     # function.zip with the "bootstrap" binary for Lambda
+```
 
 ## Hard Constraints
 
 - **Kotlin is pinned to 1.9.x, not 2.0**: the `openapi` module's test dependency (kotlin-compile-testing) does not support KSP2. See https://github.com/ZacSweers/kotlin-compile-testing/issues/340.
-- **No runtime reflection in the router**: `KType`/`typeOf<T>()`/`serializer(kType)` were deliberately removed for GraalVM native-image compatibility (see NATIVE_IMAGE_CHANGES.md). Serializers are captured at compile time via reified `serializer<I>()` at route registration (`RequestPredicate.inputSerializer`) and in `Response` factory methods (`Response.outputSerializer`). Do not reintroduce reflection-based serializer lookup.
+- **No runtime reflection in the router**: `KType`/`typeOf<T>()`/`serializer(kType)` were deliberately removed for GraalVM native-image compatibility (see NATIVE_IMAGE_CHANGES.md). Serializers are captured at compile time via reified `serializer<I>()` at route registration (`RequestPredicate.inputSerializer`) and in `Response` factory methods (`Response.outputSerializer`). Do not reintroduce reflection-based serializer lookup. Any class the router must access reflectively (e.g. `NoAuth`) has to be registered in the router's `reflect-config.json` (see below).
 
 ## Architecture
 
@@ -35,11 +45,25 @@ Users extend the abstract class `LambdaRouter` (the AWS `RequestHandler` entry p
 
 Request flow: `LambdaRouter.handleRequest` (lowercases headers) → internal `LambdaRequestHandler.handleRequest` → `validateRoute` matches routes in order path → method → accept header, returning 404/405/406 respectively on failure → authorizer check (401) → `RouteProcessor.processRoute` deserializes the body and invokes the handler → `serializeResponse` encodes the `Response` per the negotiated `MimeType` and adds CORS headers.
 
+Content negotiation: `MimeType.isCompatibleWith` understands wildcard and parameterised Accept headers (`*/*`, `text/*`, `application/xml;q=0.9`). The response Content-Type is the type negotiated with the matched route (`RequestPredicate.matchedAcceptType`), never a raw wildcard from the Accept header.
+
 Key pieces:
 - `Router` — the DSL (`get`, `post`, `put`, `patch`, `delete`). GET/DELETE don't consume a body; POST/PUT/PATCH capture `inputSerializer` at registration. `group("/path") { }` prefixes routes; `auth(authorizer) { }` wraps routes with an `Authorizer` (interface in `Authorizer.kt`; JWT deps are available but `NoAuth` is the default).
 - `RequestPredicate` — one registered route: method + path pattern (path params in `{braces}`) + consumed/produced mime types. Defaults are JSON both ways; override per-route with the `expects(...)`/`supplies(...)` extension functions.
 - `Requests.kt` / `Responses.kt` — `Request<I>` (typed body, path/query params) and `Response<T>` with factory methods (`Response.OK`, `Response.notFound`, ...).
 
+### `sample-native` — a standalone consumer sample (not part of the root build)
+
+Proves the GraalVM path end-to-end: a `LambdaRouter` subclass compiled with `nativeCompile` into a `bootstrap` binary for the Lambda `provided.al2023` custom runtime (deployed successfully to AWS). `Main.kt` implements the Lambda custom runtime event loop (polls the Runtime API when `AWS_LAMBDA_RUNTIME_API` is set; runs a built-in self-test otherwise). `EventJson.kt` is a Jackson-free bridge: hand-rolled `@Serializable` DTOs deserialize the API Gateway JSON and copy fields into the AWS event classes. `CognitoAuthorizer.kt` secures `/secure/hello` via the `auth { }` DSL by validating Cognito access tokens the same Jackson-free way (kotlinx.serialization + JDK crypto for RS256, JWKS fetched over HTTPS and cached) — proven end-to-end on AWS in the native image, with no reflection config needed. `infra/` holds a minimal OpenTofu/Terraform deployment including the Cognito user pool, client, and test user (password supplied at apply time via `-var test_user_password=…`).
+
 ### `openapi` — a KSP annotation processor (`org.liamjd.apiviaduct.schema`)
 
 Build-time only; generates OpenAPI YAML fragments (info, schemas, paths) from annotations (`@OpenAPIInfo`, `@OpenAPISchema`, `@OpenAPIPath` by default; annotation FQNs are overridable via KSP options `infoAnnotation`/`schemaAnnotation`/`routeAnnotation`). `OpenAPIProcessor` orchestrates; `ObjectSchemaProcessor` and `OpenAPIInfoProcessor` do the YAML building. Tests compile Kotlin sources in-process with kotlin-compile-testing. Only a subset of the OpenAPI 3.1 spec is targeted — OpenAPISpecNotes.md lists which fields, in priority order.
+
+## GraalVM Native Image
+
+APIViaduct is a **library**: it is never compiled to a native image itself; consumer Lambda projects are. The router's job is to be native-image *safe* and to ship reachability metadata that consumers pick up automatically from `router/src/main/resources/META-INF/native-image/org.liamjd.apiviaduct/router/` (`reflect-config.json` registers `NoAuth`; `native-image.properties` adds `--enable-url-protocols=https` for jwks-rsa). Consumers must register their own `Authorizer` implementations in their own reflect-config.
+
+- `./gradlew :router:nativeTest` compiles the router test suite to a native executable and runs it — the primary native-compatibility check. All router tests pass. Requires GraalVM; CI runs it (`.github/workflows/native-image.yml`, currently triggered on `*graalvm*` branches).
+- Native builds use `--no-fallback` and `--initialize-at-build-time=kotlin` (the JUnit native feature conflicts with run-time init of Kotlin annotation classes otherwise).
+- The remaining blocker is the consumer's runtime layer, not the library: `aws-lambda-java-events` only invokes Jackson when the managed runtime deserializes events, which the sample sidesteps with its custom runtime loop. `GRAALVM_RECOMMENDATIONS.md` tracks status (sections annotated DONE/STALE/OPEN — trust the annotations over the original text); `GRAALVM_CONSUMER_GUIDE.md` is the user-facing build guide.
