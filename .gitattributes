@@ -1,9 +1,11 @@
-# Enforce LF endings for all text files, in the repository and in the
-# working tree, regardless of any local core.autocrlf setting. This keeps
-# scripts (gradlew) runnable on Linux/WSL/CI.
-* text=auto eol=lf
+# Normalize all text files to LF in the repository
+* text=auto
 
-# Windows batch scripts need CRLF to run correctly.
+# Shell scripts must always check out with LF, even on Windows
+gradlew text eol=lf
+*.sh text eol=lf
+
+# Windows batch files must always check out with CRLF
 *.bat text eol=crlf
 
 # Binary files — never touch line endings.
