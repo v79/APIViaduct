@@ -1,7 +1,7 @@
 plugins {
     kotlin("jvm") version "1.9.23"
     kotlin("plugin.serialization") version "1.9.23"
-    id("org.graalvm.buildtools.native") version "0.10.4"
+    id("org.graalvm.buildtools.native") version "0.10.6"
     application
 }
 
@@ -19,8 +19,8 @@ dependencies {
 
     // The router declares these as implementation dependencies, so a consumer
     // that references the AWS event classes directly must declare them itself
-    implementation("com.amazonaws:aws-lambda-java-core:1.2.3")
-    implementation("com.amazonaws:aws-lambda-java-events:3.11.5")
+    implementation("com.amazonaws:aws-lambda-java-core:1.4.0")
+    implementation("com.amazonaws:aws-lambda-java-events:3.16.1")
 
     implementation("org.jetbrains.kotlinx:kotlinx-serialization-json:1.6.3")
 }
@@ -30,7 +30,7 @@ application {
 }
 
 kotlin {
-    jvmToolchain(17)
+    jvmToolchain(21)
 }
 
 graalvmNative {
