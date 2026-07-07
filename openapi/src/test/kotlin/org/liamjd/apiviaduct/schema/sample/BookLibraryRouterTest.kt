@@ -8,7 +8,8 @@ import kotlin.test.assertTrue
 
 class BookLibraryRouterTest {
 
-    private val doc = OpenApiGenerator(BookLibraryRouter().router, bookLibraryApiInfo).buildDocument()
+    // Info comes from the router's openApi { } DSL — no override passed.
+    private val doc = OpenApiGenerator(BookLibraryRouter().router).buildDocument()
 
     @Suppress("UNCHECKED_CAST")
     private fun Map<String, Any?>.map(key: String) = this[key] as Map<String, Any?>

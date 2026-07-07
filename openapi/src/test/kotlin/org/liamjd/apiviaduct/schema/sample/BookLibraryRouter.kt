@@ -7,8 +7,8 @@ import org.liamjd.apiviaduct.routing.LambdaRouter
 import org.liamjd.apiviaduct.routing.Request
 import org.liamjd.apiviaduct.routing.Response
 import org.liamjd.apiviaduct.routing.lambdaRouter
+import org.liamjd.apiviaduct.routing.openApi
 import org.liamjd.apiviaduct.routing.spec
-import org.liamjd.apiviaduct.schema.OpenApiInfo
 
 /**
  * A worked CRUD sample for a book library, built to exercise the whole `spec { }` DSL surface
@@ -22,6 +22,19 @@ import org.liamjd.apiviaduct.schema.OpenApiInfo
  */
 class BookLibraryRouter : LambdaRouter() {
     override val router = lambdaRouter {
+
+        // Document-level metadata: the info/servers sections of the generated document.
+        openApi {
+            info {
+                title = "Book Library API"
+                version = "1.0.0"
+                description = "A small CRUD API for managing a library of books."
+                contact(name = "Library Team", email = "library@example.com")
+                license(name = "Apache-2.0", identifier = "Apache-2.0")
+            }
+            server("https://api.example.com", "production")
+        }
+
         group("/books") {
 
             // GET /books — list, with optional filtering documented as query parameters.
@@ -98,16 +111,6 @@ class BookLibraryRouter : LambdaRouter() {
         }
     }
 }
-
-/** Document-level metadata for the sample, supplied to `OpenApiGenerator`. */
-val bookLibraryApiInfo = OpenApiInfo(
-    title = "Book Library API",
-    version = "1.0.0",
-    description = "A small CRUD API for managing a library of books.",
-    contact = OpenApiInfo.Contact(name = "Library Team", email = "library@example.com"),
-    license = OpenApiInfo.License(name = "Apache-2.0", identifier = "Apache-2.0"),
-    servers = listOf(OpenApiInfo.Server("https://api.example.com", "production"))
-)
 
 @Serializable
 enum class Genre { FICTION, NON_FICTION, SCIENCE_FICTION, HISTORY, POETRY }

@@ -1,12 +1,15 @@
 package org.liamjd.apiviaduct.schema
 
 import kotlinx.serialization.Serializable
+import org.liamjd.apiviaduct.routing.OpenApiInfo
 import org.liamjd.apiviaduct.routing.Request
 import org.liamjd.apiviaduct.routing.Response
 import org.liamjd.apiviaduct.routing.lambdaRouter
+import org.liamjd.apiviaduct.routing.openApi
 import org.liamjd.apiviaduct.routing.spec
 import kotlin.test.Test
 import kotlin.test.assertEquals
+import kotlin.test.assertFailsWith
 import kotlin.test.assertNull
 import kotlin.test.assertTrue
 
@@ -38,6 +41,25 @@ class OpenApiGeneratorTest {
         assertEquals("3.1.0", doc["openapi"])
         assertEquals("Library API", doc.map("info")["title"])
         assertEquals("1.0.0", doc.map("info")["version"])
+    }
+
+    @Test
+    fun `info is read from the router's openApi DSL when no override is given`() {
+        val dslRouter = lambdaRouter {
+            openApi { info { title = "DSL API"; version = "9.9.9" } }
+            get("/ping", { _: Request<Unit> -> Response.ok("pong") })
+        }
+        val doc = OpenApiGenerator(dslRouter).buildDocument()
+        assertEquals("DSL API", doc.map("info")["title"])
+        assertEquals("9.9.9", doc.map("info")["version"])
+    }
+
+    @Test
+    fun `generator fails when no info is available from either source`() {
+        val bareRouter = lambdaRouter {
+            get("/ping", { _: Request<Unit> -> Response.ok("pong") })
+        }
+        assertFailsWith<IllegalStateException> { OpenApiGenerator(bareRouter).buildDocument() }
     }
 
     @Test

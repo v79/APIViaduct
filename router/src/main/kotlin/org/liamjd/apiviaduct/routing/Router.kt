@@ -13,6 +13,10 @@ class Router internal constructor() {
     val consumeByDefault = setOf(MimeType.json)
     val produceByDefault = setOf(MimeType.json)
 
+    /** Document-level OpenAPI metadata declared via the [openApi] DSL; null when none is declared. */
+    var openApiInfo: OpenApiInfo? = null
+        internal set
+
     private val groups = mutableSetOf<Group>()
 
     /**

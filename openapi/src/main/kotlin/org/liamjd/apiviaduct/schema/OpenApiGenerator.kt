@@ -1,6 +1,7 @@
 package org.liamjd.apiviaduct.schema
 
 import kotlinx.serialization.KSerializer
+import org.liamjd.apiviaduct.routing.OpenApiInfo
 import org.liamjd.apiviaduct.routing.RequestPredicate
 import org.liamjd.apiviaduct.routing.Router
 
@@ -16,14 +17,20 @@ import org.liamjd.apiviaduct.routing.Router
  *
  * Call [generateYaml] for the document as a YAML string, or [buildDocument] for the underlying tree.
  *
+ * Document-level `info`/`servers` come from the router's `openApi { }` block; pass [infoOverride] to
+ * supply or replace them programmatically (it takes precedence over the router's declaration).
+ *
  * Known simplification: nullable schemas are emitted as `nullable: true` (OpenAPI 3.0 style) rather
  * than the 3.1 `type: [..., "null"]` form. Adequate for the targeted subset; revisit if strict 3.1
  * validation is required.
  */
 class OpenApiGenerator(
     private val router: Router,
-    private val info: OpenApiInfo
+    infoOverride: OpenApiInfo? = null
 ) {
+    private val info: OpenApiInfo = infoOverride ?: router.openApiInfo
+        ?: error("No OpenAPI info: declare an openApi { } block in the router or pass infoOverride to OpenApiGenerator")
+
     private val schemaGen = SchemaGenerator()
 
     /** The full OpenAPI document rendered as YAML. */
