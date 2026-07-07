@@ -395,7 +395,6 @@ internal class RouterTest {
 internal class TestRouter : LambdaRouter() {
     override val corsDomain: String = "https://example.com"
     override val router = lambdaRouter {
-        // basic methods
         get("/test", handler = { _: Request<Unit> -> Response.ok() })
         patch("/patchTest", handler = { _: Request<Unit> -> Response.ok() })
         delete("/deleteTest", handler = { _: Request<Unit> -> Response.ok() })
