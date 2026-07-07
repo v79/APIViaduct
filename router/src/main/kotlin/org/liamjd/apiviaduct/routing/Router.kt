@@ -136,6 +136,13 @@ class Router internal constructor() {
     /**
      * Create a grouping of routes which share a common parent path.
      * It does this by creating a new instance of the Router, then copying its routes into the parent router, modifying the pathParameter of each
+     *
+     * NOTE: the map key here is a data-class `copy()` of the predicate, which only carries the
+     * constructor properties (method, path, consumes, produces). The mutable extras —
+     * `inputSerializer`, `outputSerializer`, `spec`, `headerOverrides` — live only on the *value's*
+     * predicate (`RouteFunction.predicate`), which is mutated in place below. Runtime routing and
+     * the OpenAPI generator both read predicates from the values for this reason; reading them from
+     * `routes.keys` would silently see nulls for grouped routes.
      */
     fun group(parentPath: String, block: Router.() -> Unit) {
         val childRouter = Router()
