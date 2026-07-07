@@ -19,7 +19,7 @@ APIViaduct is a Kotlin library for building serverless RESTful APIs on AWS Lambd
 ./gradlew publish               # publish to GitHub Packages (CI does this on v* tags)
 ```
 
-JVM toolchain 17. Version (`0.6.1-SNAPSHOT`) is declared separately in the root, `router/`, and `openapi/` build.gradle.kts files — bump all three together.
+JVM toolchain 17. Version (`0.7.0-SNAPSHOT`) is declared separately in the root, `router/`, and `openapi/` build.gradle.kts files — bump all three together.
 
 The `sample-native/` project is a **standalone Gradle build**, deliberately not included in the root settings.gradle.kts (a sample inside the main build previously confused Gradle). It consumes the router from mavenLocal:
 

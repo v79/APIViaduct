@@ -19,7 +19,7 @@ repositories {
 val openApiGenerator: Configuration by configurations.creating
 
 dependencies {
-    implementation("org.liamjd.apiviaduct:router:0.6.1-SNAPSHOT")
+    implementation("org.liamjd.apiviaduct:router:0.7.0-SNAPSHOT")
 
     // The router declares these as implementation dependencies, so a consumer
     // that references the AWS event classes directly must declare them itself
@@ -28,7 +28,7 @@ dependencies {
 
     implementation("org.jetbrains.kotlinx:kotlinx-serialization-json:1.6.3")
 
-    openApiGenerator("org.liamjd.apiviaduct:openapi:0.6.1-SNAPSHOT")
+    openApiGenerator("org.liamjd.apiviaduct:openapi:0.7.0-SNAPSHOT")
 }
 
 // Generates openapi.yaml from SampleRouter on the build JVM (never in the native image).
