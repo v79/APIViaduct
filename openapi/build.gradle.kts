@@ -19,6 +19,10 @@ dependencies {
     implementation(project(":router"))
 
     testImplementation(kotlin("test"))
+    // the sample router (test sources) extends LambdaRouter and reads the raw API Gateway event,
+    // whose AWS types are implementation-scoped in :router and so need declaring here for tests
+    testImplementation("com.amazonaws:aws-lambda-java-core:1.4.0")
+    testImplementation("com.amazonaws:aws-lambda-java-events:3.16.1")
 }
 
 tasks.test {

@@ -1,0 +1,243 @@
+openapi: 3.1.0
+info:
+  title: Book Library API
+  version: 1.0.0
+  description: A small CRUD API for managing a library of books.
+  contact:
+    name: Library Team
+    email: library@example.com
+  license:
+    name: Apache-2.0
+    identifier: Apache-2.0
+servers:
+- url: https://api.example.com
+  description: production
+paths:
+  /books:
+    get:
+      summary: List books
+      description: Returns every book in the library, optionally filtered by author or genre.
+      operationId: listBooks
+      tags:
+      - books
+      parameters:
+      - name: author
+        in: query
+        required: false
+        description: Only return books by this author
+        schema:
+          type: string
+      - name: genre
+        in: query
+        required: false
+        description: Only return books of this genre
+        schema:
+          type: string
+      - name: limit
+        in: query
+        required: false
+        description: Maximum number of books to return
+        schema:
+          type: string
+      responses:
+        "200":
+          description: The matching books
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Book"
+    post:
+      summary: Add a book
+      description: Creates a new book and returns it with its generated id.
+      operationId: createBook
+      tags:
+      - books
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/NewBook"
+      responses:
+        "201":
+          description: The newly created book
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Book"
+        "400":
+          description: The request body was invalid
+  /books/{id}:
+    get:
+      summary: Fetch a book
+      description: Returns a single book by its id.
+      operationId: getBook
+      tags:
+      - books
+      parameters:
+      - name: id
+        in: path
+        required: true
+        description: The book's unique id
+        schema:
+          type: string
+      responses:
+        "200":
+          description: The book
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Book"
+        "404":
+          description: No book with that id
+    put:
+      summary: Replace a book
+      description: Overwrites an existing book with the supplied representation.
+      operationId: replaceBook
+      tags:
+      - books
+      parameters:
+      - name: id
+        in: path
+        required: true
+        description: The book's unique id
+        schema:
+          type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/NewBook"
+      responses:
+        "200":
+          description: The updated book
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Book"
+        "404":
+          description: No book with that id
+    patch:
+      summary: Update a book
+      description: Applies a partial update; only the supplied fields are changed.
+      operationId: updateBook
+      tags:
+      - books
+      parameters:
+      - name: id
+        in: path
+        required: true
+        description: The book's unique id
+        schema:
+          type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/BookPatch"
+      responses:
+        "200":
+          description: The updated book
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Book"
+        "404":
+          description: No book with that id
+    delete:
+      summary: Delete a book
+      description: Removes a book from the library.
+      operationId: deleteBook
+      tags:
+      - books
+      parameters:
+      - name: id
+        in: path
+        required: true
+        description: The book's unique id
+        schema:
+          type: string
+      responses:
+        "204":
+          description: The book was deleted
+        "404":
+          description: No book with that id
+components:
+  schemas:
+    Book:
+      type: object
+      properties:
+        id:
+          type: string
+        title:
+          type: string
+        author:
+          type: string
+        genre:
+          $ref: "#/components/schemas/Genre"
+        publishedYear:
+          type: integer
+          format: int32
+        tags:
+          type: array
+          items:
+            type: string
+      required:
+      - id
+      - title
+      - author
+      - genre
+      - publishedYear
+    Genre:
+      type: string
+      enum:
+      - FICTION
+      - NON_FICTION
+      - SCIENCE_FICTION
+      - HISTORY
+      - POETRY
+    NewBook:
+      type: object
+      properties:
+        title:
+          type: string
+        author:
+          type: string
+        genre:
+          $ref: "#/components/schemas/Genre"
+        publishedYear:
+          type: integer
+          format: int32
+        tags:
+          type: array
+          items:
+            type: string
+      required:
+      - title
+      - author
+      - genre
+      - publishedYear
+    BookPatch:
+      type: object
+      properties:
+        title:
+          type: string
+          nullable: true
+        author:
+          type: string
+          nullable: true
+        genre:
+          $ref: "#/components/schemas/Genre"
+        publishedYear:
+          type: integer
+          format: int32
+          nullable: true
+        tags:
+          type: array
+          items:
+            type: string
+          nullable: true

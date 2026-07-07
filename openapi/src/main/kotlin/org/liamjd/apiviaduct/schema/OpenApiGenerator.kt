@@ -118,6 +118,7 @@ class OpenApiGenerator(
 
     private fun buildRequestBody(predicate: RequestPredicate): Map<String, Any?>? {
         val serializer = predicate.inputSerializer ?: return null
+        if (isBodyless(serializer)) return null
         return linkedMapOf(
             "required" to true,
             "content" to mediaTypeContent(predicate.accepts, serializer)
@@ -135,8 +136,9 @@ class OpenApiGenerator(
             )
         }
 
-        // Attach the response body schema to the primary success response.
-        val outputSerializer = predicate.outputSerializer
+        // Attach the response body schema to the primary success response. A `Unit` return type
+        // (e.g. a 204 handler) is serializable but carries no meaningful body, so it is skipped.
+        val outputSerializer = predicate.outputSerializer?.takeUnless { isBodyless(it) }
         if (outputSerializer != null) {
             val successCode = spec?.responses?.keys?.firstOrNull { it in 200..299 } ?: 200
             @Suppress("UNCHECKED_CAST")
@@ -152,6 +154,10 @@ class OpenApiGenerator(
         }
         return responses
     }
+
+    /** `kotlin.Unit` is serializable but represents "no body" for request/response purposes. */
+    private fun isBodyless(serializer: KSerializer<*>): Boolean =
+        serializer.descriptor.serialName.removeSuffix("?") == "kotlin.Unit"
 
     /** Build a `content` map: one media-type entry per mime type, each carrying the same schema. */
     private fun mediaTypeContent(mimeTypes: Set<*>, serializer: KSerializer<*>): Map<String, Any?> {
