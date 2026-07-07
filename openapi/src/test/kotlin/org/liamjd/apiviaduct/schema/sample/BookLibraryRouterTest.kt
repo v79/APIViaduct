@@ -83,9 +83,16 @@ class BookLibraryRouterTest {
             patch.map("requestBody").map("content").map("application/json").map("schema")["\$ref"]
         )
         val bookPatch = doc.map("components").map("schemas").map("BookPatch")
-        // No field is required, and each is nullable.
+        // No field is required, and each is nullable — expressed the 3.1 way.
         assertTrue((bookPatch["required"] as? List<*>).isNullOrEmpty())
-        assertEquals(true, bookPatch.map("properties").map("title")["nullable"])
+        val props = bookPatch.map("properties")
+        // A nullable scalar carries "null" in its type list.
+        assertEquals(listOf("string", "null"), props.map("title")["type"])
+        // A nullable $ref is wrapped in anyOf with a null type.
+        @Suppress("UNCHECKED_CAST")
+        val genreAnyOf = props.map("genre")["anyOf"] as List<Map<String, Any?>>
+        assertEquals("#/components/schemas/Genre", genreAnyOf[0]["\$ref"])
+        assertEquals("null", genreAnyOf[1]["type"])
     }
 
     @Test

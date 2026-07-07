@@ -225,19 +225,25 @@ components:
       type: object
       properties:
         title:
-          type: string
-          nullable: true
+          type:
+          - string
+          - "null"
         author:
-          type: string
-          nullable: true
+          type:
+          - string
+          - "null"
         genre:
-          $ref: "#/components/schemas/Genre"
+          anyOf:
+          - $ref: "#/components/schemas/Genre"
+          - type: "null"
         publishedYear:
-          type: integer
+          type:
+          - integer
+          - "null"
           format: int32
-          nullable: true
         tags:
-          type: array
+          type:
+          - array
+          - "null"
           items:
             type: string
-          nullable: true

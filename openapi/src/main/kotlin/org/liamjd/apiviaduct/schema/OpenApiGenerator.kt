@@ -20,9 +20,8 @@ import org.liamjd.apiviaduct.routing.Router
  * Document-level `info`/`servers` come from the router's `openApi { }` block; pass [infoOverride] to
  * supply or replace them programmatically (it takes precedence over the router's declaration).
  *
- * Known simplification: nullable schemas are emitted as `nullable: true` (OpenAPI 3.0 style) rather
- * than the 3.1 `type: [..., "null"]` form. Adequate for the targeted subset; revisit if strict 3.1
- * validation is required.
+ * Nullability follows OpenAPI 3.1 / JSON Schema 2020-12 (`type: [..., "null"]`, and `anyOf` for a
+ * nullable `$ref`) rather than the obsolete 3.0 `nullable: true` keyword — see [schemaTree].
  */
 class OpenApiGenerator(
     private val router: Router,
@@ -180,41 +179,56 @@ class OpenApiGenerator(
         return linkedMapOf("schemas" to schemas)
     }
 
-    /** Convert a [SchemaModel] into the map/list tree the [YamlEmitter] renders. */
+    /**
+     * Convert a [SchemaModel] into the map/list tree the [YamlEmitter] renders. Nullability follows
+     * OpenAPI 3.1 / JSON Schema 2020-12: a nullable typed value carries `"null"` in its `type` list
+     * (`type: [string, "null"]`), and a nullable `$ref` is wrapped in `anyOf` with a null type —
+     * `nullable: true` (the 3.0 keyword) is not used, as it has no meaning under a 3.1.0 document.
+     */
     private fun schemaTree(model: SchemaModel): Map<String, Any?> = when (model) {
         is SchemaModel.Primitive -> linkedMapOf<String, Any?>(
-            "type" to model.type,
+            "type" to nullableType(model.type, model.nullable),
             "format" to model.format
-        ).withNullable(model.nullable)
+        )
 
         is SchemaModel.EnumSchema -> linkedMapOf<String, Any?>(
-            "type" to "string",
+            "type" to nullableType("string", model.nullable),
             "enum" to model.values
-        ).withNullable(model.nullable)
+        )
 
         is SchemaModel.ArraySchema -> linkedMapOf<String, Any?>(
-            "type" to "array",
+            "type" to nullableType("array", model.nullable),
             "items" to schemaTree(model.items)
-        ).withNullable(model.nullable)
+        )
 
         is SchemaModel.MapSchema -> linkedMapOf<String, Any?>(
-            "type" to "object",
+            "type" to nullableType("object", model.nullable),
             "additionalProperties" to schemaTree(model.additionalProperties)
-        ).withNullable(model.nullable)
+        )
 
         is SchemaModel.ObjectSchema -> linkedMapOf<String, Any?>(
-            "type" to "object",
+            "type" to nullableType("object", model.nullable),
             "properties" to model.properties.mapValuesTo(linkedMapOf<String, Any?>()) { schemaTree(it.value) },
             "required" to model.required
-        ).withNullable(model.nullable)
+        )
 
-        is SchemaModel.Ref -> linkedMapOf<String, Any?>("\$ref" to model.pointer)
+        is SchemaModel.Ref ->
+            if (model.nullable) {
+                // A $ref can't carry a sibling type in JSON Schema 2020-12, so wrap it.
+                linkedMapOf<String, Any?>(
+                    "anyOf" to listOf(
+                        linkedMapOf("\$ref" to model.pointer),
+                        linkedMapOf("type" to "null")
+                    )
+                )
+            } else {
+                linkedMapOf<String, Any?>("\$ref" to model.pointer)
+            }
     }
 
-    private fun LinkedHashMap<String, Any?>.withNullable(nullable: Boolean): LinkedHashMap<String, Any?> {
-        if (nullable) this["nullable"] = true
-        return this
-    }
+    /** The 3.1 type form: a bare `type` when non-nullable, or a `[type, "null"]` list when nullable. */
+    private fun nullableType(type: String, nullable: Boolean): Any =
+        if (nullable) listOf(type, "null") else type
 
     private fun reasonPhrase(code: Int): String = when (code) {
         200 -> "OK"
