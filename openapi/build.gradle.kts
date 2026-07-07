@@ -12,19 +12,13 @@ repositories {
 }
 
 dependencies {
-    // KSP (kept on the Kotlin 1.9.23 line; KSP2 blocked by kotlin-compile-testing)
-    implementation("com.google.devtools.ksp:symbol-processing-api:1.9.23-1.0.20")
-
     // kotlinx.serialization descriptors drive the reflection-free schema generation (issue #30)
     implementation("org.jetbrains.kotlinx:kotlinx-serialization-core:1.6.3")
 
     // the generator reads registered routes (RequestPredicate, RouteSpec, serializers) at runtime
     implementation(project(":router"))
 
-
     testImplementation(kotlin("test"))
-    testImplementation("com.github.tschuchortdev:kotlin-compile-testing:1.6.0")
-    testImplementation("com.github.tschuchortdev:kotlin-compile-testing-ksp:1.6.0")
 }
 
 tasks.test {
