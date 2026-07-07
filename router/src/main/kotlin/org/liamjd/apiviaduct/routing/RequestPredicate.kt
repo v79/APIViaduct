@@ -36,8 +36,14 @@ data class RequestPredicate(
     var headerOverrides = mutableMapOf<String, String>()
         private set
 
+    /**
+     * Optional OpenAPI documentation for this route, attached via the [spec] DSL.
+     * Null when the route carries no hand-authored spec; the generator still derives a baseline
+     * spec from the route's path, method, media types, and serializers.
+     */
+    var spec: RouteSpec? = null
+
     // FUTURE: Add filters or middleware
-    // FUTURE: Add APISpecification
 
     fun match(request: APIGatewayProxyRequestEvent) =
         RequestMatchResult(matchPath = pathMatches(request.path),
