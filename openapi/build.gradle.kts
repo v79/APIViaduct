@@ -18,6 +18,9 @@ dependencies {
     // kotlinx.serialization descriptors drive the reflection-free schema generation (issue #30)
     implementation("org.jetbrains.kotlinx:kotlinx-serialization-core:1.6.3")
 
+    // the generator reads registered routes (RequestPredicate, RouteSpec, serializers) at runtime
+    implementation(project(":router"))
+
 
     testImplementation(kotlin("test"))
     testImplementation("com.github.tschuchortdev:kotlin-compile-testing:1.6.0")
