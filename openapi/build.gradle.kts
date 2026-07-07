@@ -5,20 +5,27 @@ plugins {
 }
 
 group = "org.liamjd.apiviaduct"
-version = "0.6.1-SNAPSHOT"
+version = "0.7.0-SNAPSHOT"
 
 repositories {
     mavenCentral()
 }
 
 dependencies {
-    // KSP (kept on the Kotlin 1.9.23 line; KSP2 blocked by kotlin-compile-testing)
-    implementation("com.google.devtools.ksp:symbol-processing-api:1.9.23-1.0.20")
+    // kotlinx.serialization descriptors drive the reflection-free schema generation (issue #30)
+    implementation("org.jetbrains.kotlinx:kotlinx-serialization-core:1.6.3")
 
+    // the generator reads registered routes (RequestPredicate, RouteSpec, serializers) at runtime
+    implementation(project(":router"))
+
+    // OpenApiCli instantiates a LambdaRouter, whose supertype is the AWS RequestHandler; :router
+    // hides the AWS deps (implementation-scoped), so declare it here — needed at both compile and
+    // runtime, and inherited by the test classpath (testImplementation extends implementation)
+    implementation("com.amazonaws:aws-lambda-java-core:1.4.0")
 
     testImplementation(kotlin("test"))
-    testImplementation("com.github.tschuchortdev:kotlin-compile-testing:1.6.0")
-    testImplementation("com.github.tschuchortdev:kotlin-compile-testing-ksp:1.6.0")
+    // the sample router (test sources) reads the raw API Gateway event (queryStringParameters etc.)
+    testImplementation("com.amazonaws:aws-lambda-java-events:3.16.1")
 }
 
 tasks.test {

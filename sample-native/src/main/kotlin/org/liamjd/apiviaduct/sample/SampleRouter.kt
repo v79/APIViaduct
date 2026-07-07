@@ -6,6 +6,7 @@ import org.liamjd.apiviaduct.routing.MimeType
 import org.liamjd.apiviaduct.routing.Request
 import org.liamjd.apiviaduct.routing.Response
 import org.liamjd.apiviaduct.routing.lambdaRouter
+import org.liamjd.apiviaduct.routing.openApi
 import org.liamjd.apiviaduct.routing.supplies
 
 @Serializable
@@ -16,6 +17,14 @@ data class Greeting(val message: String, val person: Person)
 
 class SampleRouter : LambdaRouter() {
     override val router = lambdaRouter {
+        openApi {
+            info {
+                title = "APIViaduct Native Sample"
+                version = "0.1.0"
+                description = "Demonstrates the GraalVM native path and OpenAPI generation end-to-end."
+            }
+            server("https://example.execute-api.eu-west-2.amazonaws.com", "AWS API Gateway")
+        }
         get("/hello") { _: Request<Unit> ->
             Response.ok(body = "Hello from a native image!")
         }.supplies(MimeType.plainText)

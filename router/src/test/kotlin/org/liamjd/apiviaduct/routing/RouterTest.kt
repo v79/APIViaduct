@@ -5,13 +5,35 @@ import com.amazonaws.services.lambda.runtime.CognitoIdentity
 import com.amazonaws.services.lambda.runtime.Context
 import com.amazonaws.services.lambda.runtime.LambdaLogger
 import com.amazonaws.services.lambda.runtime.events.APIGatewayProxyRequestEvent
+import kotlinx.serialization.ExperimentalSerializationApi
 import kotlinx.serialization.Serializable
 import kotlin.test.Test
 import kotlin.test.assertEquals
+import kotlin.test.assertNull
 
 internal class RouterTest {
 
     private val context = TestContext()
+
+    private fun TestRouter.predicateFor(method: String, path: String) =
+        router.routes.keys.single { it.method == method && it.pathPattern == path }
+
+    @OptIn(ExperimentalSerializationApi::class)
+    @Test
+    fun `outputSerializer is captured for a route returning a serializable body`() {
+        val predicate = TestRouter().predicateFor("POST", "/postObj")
+        assertEquals(
+            predicate.outputSerializer?.descriptor?.serialName?.endsWith("RespObj"),
+            true,
+            "expected the RespObj serializer to be captured, got ${predicate.outputSerializer}"
+        )
+    }
+
+    @Test
+    fun `outputSerializer is null for a body-less route where T is inferred as Any`() {
+        val predicate = TestRouter().predicateFor("GET", "/test")
+        assertNull(predicate.outputSerializer)
+    }
 
     @Test
     fun `basic test of router`() {
@@ -373,7 +395,6 @@ internal class RouterTest {
 internal class TestRouter : LambdaRouter() {
     override val corsDomain: String = "https://example.com"
     override val router = lambdaRouter {
-        // basic methods
         get("/test", handler = { _: Request<Unit> -> Response.ok() })
         patch("/patchTest", handler = { _: Request<Unit> -> Response.ok() })
         delete("/deleteTest", handler = { _: Request<Unit> -> Response.ok() })

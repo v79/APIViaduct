@@ -9,7 +9,7 @@ The library will support route grouping, authentication, all the main REST metho
 
 This library is not intended to be used as a general web server framework.
 
-This library does not yet support Kotlin 2.0 because the testing libraries for the OpenAPI module do not support KSP2. See https://github.com/ZacSweers/kotlin-compile-testing/issues/340 .
+The library currently builds against Kotlin 1.9.23. The previous KSP2 blocker (the OpenAPI module's `kotlin-compile-testing` dependency) has been removed along with the old annotation processor, so a move to Kotlin 2.0 is no longer blocked by the OpenAPI module.
 
 ## Example
 ```kotlin
