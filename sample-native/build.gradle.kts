@@ -14,6 +14,10 @@ repositories {
     google()
 }
 
+// Build-time-only classpath for OpenAPI generation. Kept separate from `implementation` so the
+// openapi generator (and its deps) never enter the runtime classpath or the native image.
+val openApiGenerator: Configuration by configurations.creating
+
 dependencies {
     implementation("org.liamjd.apiviaduct:router:0.6.1-SNAPSHOT")
 
@@ -23,6 +27,21 @@ dependencies {
     implementation("com.amazonaws:aws-lambda-java-events:3.16.1")
 
     implementation("org.jetbrains.kotlinx:kotlinx-serialization-json:1.6.3")
+
+    openApiGenerator("org.liamjd.apiviaduct:openapi:0.6.1-SNAPSHOT")
+}
+
+// Generates openapi.yaml from SampleRouter on the build JVM (never in the native image).
+// Run `../gradlew :router:publishToMavenLocal :openapi:publishToMavenLocal` first.
+tasks.register<JavaExec>("generateOpenApi") {
+    group = "documentation"
+    description = "Generates an OpenAPI document from SampleRouter"
+    classpath = sourceSets.main.get().runtimeClasspath + openApiGenerator
+    mainClass.set("org.liamjd.apiviaduct.schema.OpenApiCli")
+    args(
+        "org.liamjd.apiviaduct.sample.SampleRouter",
+        layout.buildDirectory.file("openapi/openapi.yaml").get().asFile.path
+    )
 }
 
 application {
