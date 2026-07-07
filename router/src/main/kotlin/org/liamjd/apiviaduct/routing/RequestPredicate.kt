@@ -15,6 +15,7 @@ import java.util.*
  * @property accepts is an alias for consumes
  * @property supplies is an alias for produces
  * @property inputSerializer optional serializer for the request body
+ * @property outputSerializer serializer for the response body, captured from the handler's return type at registration; drives response-schema generation
  */
 data class RequestPredicate(
     val method: String, var pathPattern: String,
@@ -22,6 +23,7 @@ data class RequestPredicate(
     internal var produces: Set<MimeType>
 ) {
     var inputSerializer: KSerializer<*>? = null
+    var outputSerializer: KSerializer<*>? = null
     val accepts
         get() = consumes
     val supplies
