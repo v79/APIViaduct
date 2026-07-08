@@ -114,8 +114,9 @@ object RouteProcessor {
         try {
             (handler as HandlerFunction<*, *>)(request)
         } catch (e: Exception) {
-            println("Error calling handler function: ${e.message}")
-            Response.serverError(body = "Server error in processing request for ${handler}: ${e.message}")
+            // log the detail; the response body must not leak handler class names or exception messages
+            println("Error calling handler function ${handler}: ${e::class.qualifiedName}: ${e.message}")
+            Response.serverError(body = "Server error in processing request")
         }
 
 }

@@ -195,7 +195,7 @@ internal class LambdaRequestHandler {
                     </head>
                     <body>
                     <h1>${response.statusCode}</h1>
-                    <p>${response.body}</p>
+                    <p>${escapeMarkup(response.body.toString())}</p>
                     </body>
                     </html>
                 """.trimIndent()
@@ -206,7 +206,7 @@ internal class LambdaRequestHandler {
                     <?xml version="1.0" encoding="UTF-8"?>
                     <response>
                     <status>${response.statusCode}</status>
-                    <body>${response.body}</body>
+                    <body>${escapeMarkup(response.body.toString())}</body>
                     </response>
                 """.trimIndent()
                         }
@@ -245,6 +245,21 @@ internal class LambdaRequestHandler {
                 "Access-Control-Allow-Origin" to corsDomain
             )
             body = responseString
+        }
+    }
+
+    /**
+     * Escape a string for safe interpolation into HTML or XML markup. Response bodies may
+     * contain user-supplied data, which must not be able to inject markup (XSS)
+     */
+    private fun escapeMarkup(text: String): String = buildString {
+        for (c in text) when (c) {
+            '&' -> append("&amp;")
+            '<' -> append("&lt;")
+            '>' -> append("&gt;")
+            '"' -> append("&quot;")
+            '\'' -> append("&apos;")
+            else -> append(c)
         }
     }
 

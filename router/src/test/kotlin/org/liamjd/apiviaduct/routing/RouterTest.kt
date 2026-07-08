@@ -254,6 +254,34 @@ internal class RouterTest {
             headers = mapOf("accept" to "application/json")
         }, context)
         assertEquals(500, response.statusCode)
+        // the response must not leak the exception message or handler class name
+        assertEquals("Server error in processing request", response.body)
+    }
+
+    @Test
+    fun `escapes html markup in the response body when serving html`() {
+        val testRouter = TestRouter()
+        val response = testRouter.handleRequest(APIGatewayProxyRequestEvent().apply {
+            path = "/htmlEscape"
+            httpMethod = "GET"
+            headers = mapOf("accept" to "text/html")
+        }, context)
+        assertEquals(200, response.statusCode)
+        assert(!response.body.contains("<script>"))
+        assert(response.body.contains("&lt;script&gt;alert(&apos;pwned&apos;)&lt;/script&gt;"))
+    }
+
+    @Test
+    fun `escapes xml markup in the response body when serving xml`() {
+        val testRouter = TestRouter()
+        val response = testRouter.handleRequest(APIGatewayProxyRequestEvent().apply {
+            path = "/htmlEscape"
+            httpMethod = "GET"
+            headers = mapOf("accept" to "application/xml")
+        }, context)
+        assertEquals(200, response.statusCode)
+        assert(!response.body.contains("<script>"))
+        assert(response.body.contains("&lt;script&gt;alert(&apos;pwned&apos;)&lt;/script&gt;"))
     }
 
     @Test
@@ -467,6 +495,9 @@ internal class TestRouter : LambdaRouter() {
         put("/putTest", handler = { _: Request<Unit> -> Response.ok() })
         get("/notImplemented", handler = { _: Request<Unit> -> Response.notImplemented() })
         get("/throws", handler = { _: Request<Unit> -> Response.ok(body = deliberateFailure()) })
+        get("/htmlEscape", handler = { _: Request<Unit> ->
+            Response.ok(body = InjectedObj("<script>alert('pwned')</script>"))
+        }).supplies(setOf(MimeType.html, MimeType.xml))
         // multiple methods on same route
         put(
             "/multipleMethods",
@@ -546,6 +577,9 @@ internal class TestRouter : LambdaRouter() {
 }
 
 internal fun deliberateFailure(): String = throw RuntimeException("deliberate test exception")
+
+@Serializable
+internal data class InjectedObj(val content: String)
 
 @Serializable
 internal class ReqObj(val name: String, val age: Int)
