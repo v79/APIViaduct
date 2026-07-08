@@ -99,7 +99,10 @@ internal class LambdaRequestHandler {
                         if (!authResult.authorized) {
                             return Response.unauthorized(
                                 body = authResult.message,
-                                headers = mapOf("Content-Type" to MimeType.plainText.toString())
+                                headers = mapOf(
+                                    "Content-Type" to MimeType.plainText.toString(),
+                                    "WWW-Authenticate" to route.value.authorizer.type.authenticateScheme()
+                                )
                             ) to null
                         }
                     }
@@ -127,7 +130,8 @@ internal class LambdaRequestHandler {
      * @param route the route to match against
      */
     private fun matchPath(input: APIGatewayProxyRequestEvent, route: RouteFunction<*, *>): Boolean {
-        val pathParts = input.path.split("/")
+        // path is a platform type and could be null in a hand-crafted or malformed event
+        val pathParts = (input.path ?: return false).split("/")
         val routeParts = route.predicate.pathPattern.split("/")
         if (pathParts.size != routeParts.size) {
             return false
@@ -238,10 +242,14 @@ internal class LambdaRequestHandler {
         }
 
 
+        // a Content-Type set explicitly on the response (e.g. by the error factories) describes
+        // the actual body and must win over the type negotiated from the Accept header
+        val explicitContentType =
+            response.headers.entries.firstOrNull { it.key.equals("Content-Type", ignoreCase = true) }?.value
         return APIGatewayProxyResponseEvent().apply {
             statusCode = response.statusCode
             headers = response.headers + mapOf(
-                "Content-Type" to mimeType.toString(),
+                "Content-Type" to (explicitContentType ?: mimeType.toString()),
                 "Access-Control-Allow-Origin" to corsDomain
             )
             body = responseString
@@ -311,8 +319,11 @@ internal class LambdaRequestHandler {
         wantedTypes: Set<MimeType>
     ): Response<String> {
         println("Route $httpMethod $path cannot provide requested content type ($wantedTypes)")
-        // get list of allowed methods for this path
-        val canProvide = router.routes.filterKeys { it.pathPattern == path }.keys.map { it.produces }
-        return Response.notAcceptable(body = "", headers = mapOf("Content-Type" to canProvide.joinToString(",")))
+        // list the types this path can provide, so the client can retry with a suitable accept header
+        val canProvide = router.routes.filterKeys { it.pathPattern == path }.keys.flatMap { it.produces }.toSet()
+        return Response.notAcceptable(
+            body = "Route $httpMethod $path can only provide: ${canProvide.joinToString(", ")}",
+            headers = mapOf("Content-Type" to MimeType.plainText.toString())
+        )
     }
 }

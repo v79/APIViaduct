@@ -246,6 +246,42 @@ internal class RouterTest {
     }
 
     @Test
+    fun `error responses keep their own Content-Type rather than the negotiated type`() {
+        val testRouter = TestRouter()
+        val response = testRouter.handleRequest(APIGatewayProxyRequestEvent().apply {
+            path = "/noSuchRoute"
+            httpMethod = "GET"
+            headers = mapOf("accept" to "application/json")
+        }, context)
+        assertEquals(404, response.statusCode)
+        // the 404 body is plain text; the accept header's application/json must not relabel it
+        assertEquals("text/plain", response.headers["Content-Type"])
+    }
+
+    @Test
+    fun `406 response lists the types the route can provide in its body`() {
+        val testRouter = TestRouter()
+        val response = testRouter.handleRequest(APIGatewayProxyRequestEvent().apply {
+            path = "/getText"
+            httpMethod = "GET"
+            headers = mapOf("accept" to "application/pdf")
+        }, context)
+        assertEquals(406, response.statusCode)
+        assertEquals("text/plain", response.headers["Content-Type"])
+        assert(response.body.contains("text/plain"))
+    }
+
+    @Test
+    fun `returns 404 for a request with a null path`() {
+        val testRouter = TestRouter()
+        val response = testRouter.handleRequest(APIGatewayProxyRequestEvent().apply {
+            httpMethod = "GET"
+            headers = mapOf("accept" to "application/json")
+        }, context)
+        assertEquals(404, response.statusCode)
+    }
+
+    @Test
     fun `returns 500 when a GET handler throws an exception`() {
         val testRouter = TestRouter()
         val response = testRouter.handleRequest(APIGatewayProxyRequestEvent().apply {
