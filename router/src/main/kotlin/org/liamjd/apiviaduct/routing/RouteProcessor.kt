@@ -58,14 +58,13 @@ object RouteProcessor {
                         val typedSerializer = inputSerializer as kotlinx.serialization.KSerializer<Any>
                         val bodyObject =
                             if (contentLength == "0") ""
+                            else if (rawBody == null) return missingBodyResponse(input.httpMethod)
                             else if (contentType != null) when (MimeType.parse(contentType)) {
                                 MimeType.json -> {
-                                    if (rawBody == null) return missingBodyResponse(input.httpMethod)
                                     Json.decodeFromString(typedSerializer, rawBody)
                                 }
 
                                 MimeType.yaml -> {
-                                    if (rawBody == null) return missingBodyResponse(input.httpMethod)
                                     Yaml.default.decodeFromString(typedSerializer, rawBody)
                                 }
 

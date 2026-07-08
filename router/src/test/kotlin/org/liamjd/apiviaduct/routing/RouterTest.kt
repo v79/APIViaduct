@@ -140,7 +140,7 @@ internal class RouterTest {
         val response = testRouter.handleRequest(APIGatewayProxyRequestEvent().apply {
             path = "/patchTest"
             httpMethod = "PATCH"
-            headers = mapOf("accept" to "application/json")
+            headers = mapOf("accept" to "application/json", "Content-Length" to "0")
         }, context)
         assertEquals(200, response.statusCode)
     }
@@ -187,7 +187,7 @@ internal class RouterTest {
         val response = testRouter.handleRequest(APIGatewayProxyRequestEvent().apply {
             path = "/putText"
             httpMethod = "PUT"
-            headers = mapOf("Content-Type" to "text/plain", "accept" to "application/json")
+            headers = mapOf("Content-Type" to "text/plain", "accept" to "application/json", "Content-Length" to "0")
         }, context)
         assertEquals(200, response.statusCode)
     }
@@ -270,6 +270,18 @@ internal class RouterTest {
     }
 
     @Test
+    fun `returns 400 for POST with no body and no Content-Length header`() {
+        val testRouter = TestRouter()
+        val response = testRouter.handleRequest(APIGatewayProxyRequestEvent().apply {
+            path = "/postTest"
+            httpMethod = "POST"
+            headers = mapOf("accept" to "application/json")
+        }, context)
+        assertEquals(400, response.statusCode)
+        assert(response.body.startsWith("Request body is required"))
+    }
+
+    @Test
     fun `deserializes a base64 encoded POST body`() {
         val testRouter = TestRouter()
         val json = """{"name":"Christopher","age":42}"""
@@ -305,7 +317,7 @@ internal class RouterTest {
         val response = testRouter.handleRequest(APIGatewayProxyRequestEvent().apply {
             path = "/multipleMethods"
             httpMethod = "POST"
-            headers = mapOf("accept" to "text/plain")
+            headers = mapOf("accept" to "text/plain", "Content-Length" to "0")
         }, context)
         println(response)
         assertEquals(200, response.statusCode)
@@ -318,7 +330,7 @@ internal class RouterTest {
         val response = testRouter.handleRequest(APIGatewayProxyRequestEvent().apply {
             path = "/multipleMethods"
             httpMethod = "PUT"
-            headers = mapOf("accept" to "text/plain")
+            headers = mapOf("accept" to "text/plain", "Content-Length" to "0")
         }, context)
         assertEquals(200, response.statusCode)
         assertEquals("PUT: This route accepts PUT and POST", response.body)
@@ -368,7 +380,7 @@ internal class RouterTest {
         val response = testRouter.handleRequest(APIGatewayProxyRequestEvent().apply {
             path = "/params/new/456/book"
             httpMethod = "PUT"
-            headers = mapOf("accept" to "text/plain")
+            headers = mapOf("accept" to "text/plain", "Content-Length" to "0")
         }, context)
         assertEquals(200, response.statusCode)
         assertEquals("Creating new book with ISBN=456", response.body)
@@ -380,7 +392,7 @@ internal class RouterTest {
         val response = testRouter.handleRequest(APIGatewayProxyRequestEvent().apply {
             path = "/params/new/Christopher/42"
             httpMethod = "POST"
-            headers = mapOf("accept" to "text/plain")
+            headers = mapOf("accept" to "text/plain", "Content-Length" to "0")
         }, context)
         assertEquals(200, response.statusCode)
         assertEquals("Creating new person 'Christopher' aged 42", response.body)
