@@ -140,7 +140,7 @@ internal class RouterTest {
         val response = testRouter.handleRequest(APIGatewayProxyRequestEvent().apply {
             path = "/patchTest"
             httpMethod = "PATCH"
-            headers = mapOf("accept" to "application/json")
+            headers = mapOf("accept" to "application/json", "Content-Length" to "0")
         }, context)
         assertEquals(200, response.statusCode)
     }
@@ -187,7 +187,7 @@ internal class RouterTest {
         val response = testRouter.handleRequest(APIGatewayProxyRequestEvent().apply {
             path = "/putText"
             httpMethod = "PUT"
-            headers = mapOf("Content-Type" to "text/plain", "accept" to "application/json")
+            headers = mapOf("Content-Type" to "text/plain", "accept" to "application/json", "Content-Length" to "0")
         }, context)
         assertEquals(200, response.statusCode)
     }
@@ -245,6 +245,135 @@ internal class RouterTest {
         assert(response.body.startsWith("Could not deserialize body"))
     }
 
+    @Test
+    fun `error responses keep their own Content-Type rather than the negotiated type`() {
+        val testRouter = TestRouter()
+        val response = testRouter.handleRequest(APIGatewayProxyRequestEvent().apply {
+            path = "/noSuchRoute"
+            httpMethod = "GET"
+            headers = mapOf("accept" to "application/json")
+        }, context)
+        assertEquals(404, response.statusCode)
+        // the 404 body is plain text; the accept header's application/json must not relabel it
+        assertEquals("text/plain", response.headers["Content-Type"])
+    }
+
+    @Test
+    fun `406 response lists the types the route can provide in its body`() {
+        val testRouter = TestRouter()
+        val response = testRouter.handleRequest(APIGatewayProxyRequestEvent().apply {
+            path = "/getText"
+            httpMethod = "GET"
+            headers = mapOf("accept" to "application/pdf")
+        }, context)
+        assertEquals(406, response.statusCode)
+        assertEquals("text/plain", response.headers["Content-Type"])
+        assert(response.body.contains("text/plain"))
+    }
+
+    @Test
+    fun `returns 404 for a request with a null path`() {
+        val testRouter = TestRouter()
+        val response = testRouter.handleRequest(APIGatewayProxyRequestEvent().apply {
+            httpMethod = "GET"
+            headers = mapOf("accept" to "application/json")
+        }, context)
+        assertEquals(404, response.statusCode)
+    }
+
+    @Test
+    fun `returns 500 when a GET handler throws an exception`() {
+        val testRouter = TestRouter()
+        val response = testRouter.handleRequest(APIGatewayProxyRequestEvent().apply {
+            path = "/throws"
+            httpMethod = "GET"
+            headers = mapOf("accept" to "application/json")
+        }, context)
+        assertEquals(500, response.statusCode)
+        // the response must not leak the exception message or handler class name
+        assertEquals("Server error in processing request", response.body)
+    }
+
+    @Test
+    fun `escapes html markup in the response body when serving html`() {
+        val testRouter = TestRouter()
+        val response = testRouter.handleRequest(APIGatewayProxyRequestEvent().apply {
+            path = "/htmlEscape"
+            httpMethod = "GET"
+            headers = mapOf("accept" to "text/html")
+        }, context)
+        assertEquals(200, response.statusCode)
+        assert(!response.body.contains("<script>"))
+        assert(response.body.contains("&lt;script&gt;alert(&apos;pwned&apos;)&lt;/script&gt;"))
+    }
+
+    @Test
+    fun `escapes xml markup in the response body when serving xml`() {
+        val testRouter = TestRouter()
+        val response = testRouter.handleRequest(APIGatewayProxyRequestEvent().apply {
+            path = "/htmlEscape"
+            httpMethod = "GET"
+            headers = mapOf("accept" to "application/xml")
+        }, context)
+        assertEquals(200, response.statusCode)
+        assert(!response.body.contains("<script>"))
+        assert(response.body.contains("&lt;script&gt;alert(&apos;pwned&apos;)&lt;/script&gt;"))
+    }
+
+    @Test
+    fun `returns 400 for POST with json content type but no body`() {
+        val testRouter = TestRouter()
+        val response = testRouter.handleRequest(APIGatewayProxyRequestEvent().apply {
+            path = "/postObj"
+            httpMethod = "POST"
+            // no body set at all: body is null
+            headers = mapOf("Content-Type" to "application/json", "accept" to "application/json")
+        }, context)
+        assertEquals(400, response.statusCode)
+        assert(response.body.startsWith("Request body is required"))
+    }
+
+    @Test
+    fun `returns 400 for POST with no body and no Content-Length header`() {
+        val testRouter = TestRouter()
+        val response = testRouter.handleRequest(APIGatewayProxyRequestEvent().apply {
+            path = "/postTest"
+            httpMethod = "POST"
+            headers = mapOf("accept" to "application/json")
+        }, context)
+        assertEquals(400, response.statusCode)
+        assert(response.body.startsWith("Request body is required"))
+    }
+
+    @Test
+    fun `deserializes a base64 encoded POST body`() {
+        val testRouter = TestRouter()
+        val json = """{"name":"Christopher","age":42}"""
+        val response = testRouter.handleRequest(APIGatewayProxyRequestEvent().apply {
+            path = "/postObj"
+            httpMethod = "POST"
+            body = java.util.Base64.getEncoder().encodeToString(json.toByteArray())
+            isBase64Encoded = true
+            headers = mapOf("Content-Type" to "application/json", "accept" to "application/json")
+        }, context)
+        assertEquals(200, response.statusCode)
+        assert(response.body.contains("Christopher's favourite colour is blue"))
+    }
+
+    @Test
+    fun `returns 400 for POST with invalid base64 body`() {
+        val testRouter = TestRouter()
+        val response = testRouter.handleRequest(APIGatewayProxyRequestEvent().apply {
+            path = "/postObj"
+            httpMethod = "POST"
+            body = "not-valid-base64!!!"
+            isBase64Encoded = true
+            headers = mapOf("Content-Type" to "application/json", "accept" to "application/json")
+        }, context)
+        assertEquals(400, response.statusCode)
+        assert(response.body.startsWith("Request body is not valid base64"))
+    }
+
     // multiple methods on same route
     @Test
     fun `returns correct response for POST request on route that accepts both POST and PUT`() {
@@ -252,7 +381,7 @@ internal class RouterTest {
         val response = testRouter.handleRequest(APIGatewayProxyRequestEvent().apply {
             path = "/multipleMethods"
             httpMethod = "POST"
-            headers = mapOf("accept" to "text/plain")
+            headers = mapOf("accept" to "text/plain", "Content-Length" to "0")
         }, context)
         println(response)
         assertEquals(200, response.statusCode)
@@ -265,7 +394,7 @@ internal class RouterTest {
         val response = testRouter.handleRequest(APIGatewayProxyRequestEvent().apply {
             path = "/multipleMethods"
             httpMethod = "PUT"
-            headers = mapOf("accept" to "text/plain")
+            headers = mapOf("accept" to "text/plain", "Content-Length" to "0")
         }, context)
         assertEquals(200, response.statusCode)
         assertEquals("PUT: This route accepts PUT and POST", response.body)
@@ -315,7 +444,7 @@ internal class RouterTest {
         val response = testRouter.handleRequest(APIGatewayProxyRequestEvent().apply {
             path = "/params/new/456/book"
             httpMethod = "PUT"
-            headers = mapOf("accept" to "text/plain")
+            headers = mapOf("accept" to "text/plain", "Content-Length" to "0")
         }, context)
         assertEquals(200, response.statusCode)
         assertEquals("Creating new book with ISBN=456", response.body)
@@ -327,7 +456,7 @@ internal class RouterTest {
         val response = testRouter.handleRequest(APIGatewayProxyRequestEvent().apply {
             path = "/params/new/Christopher/42"
             httpMethod = "POST"
-            headers = mapOf("accept" to "text/plain")
+            headers = mapOf("accept" to "text/plain", "Content-Length" to "0")
         }, context)
         assertEquals(200, response.statusCode)
         assertEquals("Creating new person 'Christopher' aged 42", response.body)
@@ -401,6 +530,10 @@ internal class TestRouter : LambdaRouter() {
         post("/postTest", handler = { _: Request<Unit> -> Response.ok() })
         put("/putTest", handler = { _: Request<Unit> -> Response.ok() })
         get("/notImplemented", handler = { _: Request<Unit> -> Response.notImplemented() })
+        get("/throws", handler = { _: Request<Unit> -> Response.ok(body = deliberateFailure()) })
+        get("/htmlEscape", handler = { _: Request<Unit> ->
+            Response.ok(body = InjectedObj("<script>alert('pwned')</script>"))
+        }).supplies(setOf(MimeType.html, MimeType.xml))
         // multiple methods on same route
         put(
             "/multipleMethods",
@@ -478,6 +611,11 @@ internal class TestRouter : LambdaRouter() {
         }
     }
 }
+
+internal fun deliberateFailure(): String = throw RuntimeException("deliberate test exception")
+
+@Serializable
+internal data class InjectedObj(val content: String)
 
 @Serializable
 internal class ReqObj(val name: String, val age: Int)

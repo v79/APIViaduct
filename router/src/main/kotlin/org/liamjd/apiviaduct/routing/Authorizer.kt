@@ -25,6 +25,14 @@ enum class AuthType {
     NONE, BASIC, HTTP, BEARER, JWT
 }
 
+/**
+ * The HTTP authentication scheme for a WWW-Authenticate challenge header on a 401 response
+ */
+fun AuthType.authenticateScheme(): String = when (this) {
+    AuthType.BASIC, AuthType.HTTP -> "Basic"
+    AuthType.BEARER, AuthType.JWT, AuthType.NONE -> "Bearer"
+}
+
 
 /**
  * A default authorizer that allows all requests

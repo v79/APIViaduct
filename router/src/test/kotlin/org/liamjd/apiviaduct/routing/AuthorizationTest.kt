@@ -32,6 +32,7 @@ class AuthorizationTest {
         }, context)
         assert(response.statusCode == 401)
         assertEquals("text/plain", response.headers["Content-Type"])
+        assertEquals("Basic", response.headers["WWW-Authenticate"])
     }
 
     @Test
