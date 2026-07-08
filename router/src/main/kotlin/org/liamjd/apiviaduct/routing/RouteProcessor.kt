@@ -40,6 +40,16 @@ object RouteProcessor {
                 if (inputSerializer == null) {
                     return Response.badRequest(body = "No serializer for handler function")
                 } else {
+                    // input.body is a platform type and is genuinely null when the client sends no body
+                    val rawBody: String? = if (input.isBase64Encoded == true) {
+                        try {
+                            input.body?.let { String(java.util.Base64.getDecoder().decode(it)) }
+                        } catch (iae: IllegalArgumentException) {
+                            return Response.badRequest(body = "Request body is not valid base64")
+                        }
+                    } else {
+                        input.body
+                    }
                     return try {
                         val contentType = input.getHeader("Content-Type")
                         val contentLength = input.getHeader("Content-Length")
@@ -50,25 +60,22 @@ object RouteProcessor {
                             if (contentLength == "0") ""
                             else if (contentType != null) when (MimeType.parse(contentType)) {
                                 MimeType.json -> {
-                                    Json.decodeFromString(typedSerializer, input.body)
+                                    if (rawBody == null) return missingBodyResponse(input.httpMethod)
+                                    Json.decodeFromString(typedSerializer, rawBody)
                                 }
 
                                 MimeType.yaml -> {
-                                    Yaml.default.decodeFromString(typedSerializer, input.body)
+                                    if (rawBody == null) return missingBodyResponse(input.httpMethod)
+                                    Yaml.default.decodeFromString(typedSerializer, rawBody)
                                 }
 
                                 else -> {
-                                    input.body
+                                    rawBody
                                 }
-                            } else input.body
+                            } else rawBody
                         val request = Request(input, bodyObject, handlerFunction.predicate.pathPattern)
                         // call the handler function with the request object; this will return a [Response]; if it catches an error then that's the fault of the handler function
-                        try {
-                            (handler as HandlerFunction<*, *>)(request)
-                        } catch (e: Exception) {
-                            println("Error calling handler function: ${e.message}")
-                            Response.serverError(body = "Server error in processing request for ${handler}: ${e.message}")
-                        }
+                        invokeHandler(handler, request)
                     } catch (mfe: MissingFieldException) {
                         println("Invalid request. Error is: ${mfe.message}")
                         Response.badRequest(body = "Invalid request. Error is: ${mfe.message}")
@@ -84,7 +91,7 @@ object RouteProcessor {
 
             "GET", "DELETE" -> {
                 val request = Request(input, null, handlerFunction.predicate.pathPattern)
-                return (handler as HandlerFunction<*, *>)(request)
+                return invokeHandler(handler, request)
             }
 
             else -> {
@@ -94,5 +101,22 @@ object RouteProcessor {
             }
         }
     }
+
+    private fun missingBodyResponse(httpMethod: String): Response<String> {
+        println("Request body is missing but the route's content type requires one")
+        return Response.badRequest(body = "Request body is required for $httpMethod requests")
+    }
+
+    /**
+     * Invoke the handler function, converting any exception it throws into a 500 response
+     * rather than letting it crash the Lambda invocation
+     */
+    private fun invokeHandler(handler: (Nothing) -> Response<out Any>, request: Request<*>): Response<out Any> =
+        try {
+            (handler as HandlerFunction<*, *>)(request)
+        } catch (e: Exception) {
+            println("Error calling handler function: ${e.message}")
+            Response.serverError(body = "Server error in processing request for ${handler}: ${e.message}")
+        }
 
 }

@@ -60,8 +60,17 @@ internal class LambdaRequestHandler {
             ?: input.acceptedMediaTypes().firstOrNull { !it.isWild }
             ?: MimeType.plainText
 
-        val apiGatewayResponse = serializeResponse(response, responseType, corsDomain)
-        return apiGatewayResponse
+        return try {
+            serializeResponse(response, responseType, corsDomain)
+        } catch (e: Exception) {
+            // a serializer/body mismatch must become a 500, not crash the Lambda invocation
+            logger.log("Failed to serialize response body: ${e.message}", LogLevel.ERROR)
+            serializeResponse(
+                Response.serverError(body = "Server error: could not serialize response body"),
+                MimeType.plainText,
+                corsDomain
+            )
+        }
     }
 
     /**
@@ -85,7 +94,6 @@ internal class LambdaRequestHandler {
                     val negotiatedType = route.key.matchedAcceptType(input.acceptedMediaTypes())
                         ?: route.key.produces.firstOrNull()
                     // all good, process the route
-                    // TODO: Add Authentication here
                     if (route.value.authorizer.type != AuthType.NONE) {
                         val authResult = route.value.authorizer.authorize(input)
                         if (!authResult.authorized) {

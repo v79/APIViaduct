@@ -245,6 +245,59 @@ internal class RouterTest {
         assert(response.body.startsWith("Could not deserialize body"))
     }
 
+    @Test
+    fun `returns 500 when a GET handler throws an exception`() {
+        val testRouter = TestRouter()
+        val response = testRouter.handleRequest(APIGatewayProxyRequestEvent().apply {
+            path = "/throws"
+            httpMethod = "GET"
+            headers = mapOf("accept" to "application/json")
+        }, context)
+        assertEquals(500, response.statusCode)
+    }
+
+    @Test
+    fun `returns 400 for POST with json content type but no body`() {
+        val testRouter = TestRouter()
+        val response = testRouter.handleRequest(APIGatewayProxyRequestEvent().apply {
+            path = "/postObj"
+            httpMethod = "POST"
+            // no body set at all: body is null
+            headers = mapOf("Content-Type" to "application/json", "accept" to "application/json")
+        }, context)
+        assertEquals(400, response.statusCode)
+        assert(response.body.startsWith("Request body is required"))
+    }
+
+    @Test
+    fun `deserializes a base64 encoded POST body`() {
+        val testRouter = TestRouter()
+        val json = """{"name":"Christopher","age":42}"""
+        val response = testRouter.handleRequest(APIGatewayProxyRequestEvent().apply {
+            path = "/postObj"
+            httpMethod = "POST"
+            body = java.util.Base64.getEncoder().encodeToString(json.toByteArray())
+            isBase64Encoded = true
+            headers = mapOf("Content-Type" to "application/json", "accept" to "application/json")
+        }, context)
+        assertEquals(200, response.statusCode)
+        assert(response.body.contains("Christopher's favourite colour is blue"))
+    }
+
+    @Test
+    fun `returns 400 for POST with invalid base64 body`() {
+        val testRouter = TestRouter()
+        val response = testRouter.handleRequest(APIGatewayProxyRequestEvent().apply {
+            path = "/postObj"
+            httpMethod = "POST"
+            body = "not-valid-base64!!!"
+            isBase64Encoded = true
+            headers = mapOf("Content-Type" to "application/json", "accept" to "application/json")
+        }, context)
+        assertEquals(400, response.statusCode)
+        assert(response.body.startsWith("Request body is not valid base64"))
+    }
+
     // multiple methods on same route
     @Test
     fun `returns correct response for POST request on route that accepts both POST and PUT`() {
@@ -401,6 +454,7 @@ internal class TestRouter : LambdaRouter() {
         post("/postTest", handler = { _: Request<Unit> -> Response.ok() })
         put("/putTest", handler = { _: Request<Unit> -> Response.ok() })
         get("/notImplemented", handler = { _: Request<Unit> -> Response.notImplemented() })
+        get("/throws", handler = { _: Request<Unit> -> Response.ok(body = deliberateFailure()) })
         // multiple methods on same route
         put(
             "/multipleMethods",
@@ -478,6 +532,8 @@ internal class TestRouter : LambdaRouter() {
         }
     }
 }
+
+internal fun deliberateFailure(): String = throw RuntimeException("deliberate test exception")
 
 @Serializable
 internal class ReqObj(val name: String, val age: Int)
