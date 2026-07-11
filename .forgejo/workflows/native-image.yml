@@ -1,0 +1,76 @@
+# Forgejo Actions port of .github/workflows/native-image.yml
+# Runs the router test suite as a GraalVM native image on a self-hosted
+# aarch64 Forgejo runner (Raspberry Pi), to prove the aarch64 native build.
+#
+# Differences from the GitHub version, and why:
+#   * runs-on: docker    -> matches the label your Pi runner registered, which
+#                           maps to node:20-bookworm (aarch64). That image's
+#                           buildpack-deps base already ships gcc/g++/make/
+#                           zlib1g-dev/git/curl -- the C toolchain native-image
+#                           needs -- so no custom image is required.
+#   * GraalVM is installed by hand (curl) instead of graalvm/setup-graalvm.
+#     setup-graalvm calls the api.github.com releases API using the runner's
+#     token; on Forgejo that token is not a valid github.com credential, so the
+#     call can 401. A direct download is self-contained and host-agnostic.
+#   * setup-gradle is dropped: the repo's gradle wrapper already pins 8.14.5
+#     (gradle/wrapper/gradle-wrapper.properties), so ./gradlew fetches the
+#     right Gradle itself.
+name: Native Image Tests
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - main
+  pull_request:
+
+permissions:
+  contents: read
+
+env:
+  # GraalVM Community JDK, aarch64. Bump when a newer aarch64 asset ships on
+  # https://github.com/graalvm/graalvm-ce-builds/releases
+  GRAALVM_VERSION: '21.0.2'
+
+jobs:
+  native-test:
+    runs-on: docker
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      # Optional but a big win on a Pi: without it every run re-downloads the
+      # Gradle distribution and all dependencies into the fresh container.
+      # Needs the runner's built-in cache server (enabled by default).
+      - name: Cache Gradle
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.gradle/caches
+            ~/.gradle/wrapper
+          key: gradle-${{ runner.os }}-${{ hashFiles('**/*.gradle*', '**/gradle-wrapper.properties') }}
+          restore-keys: |
+            gradle-${{ runner.os }}-
+
+      - name: Install GraalVM Community ${{ env.GRAALVM_VERSION }} (aarch64)
+        run: |
+          set -eux
+          url="https://github.com/graalvm/graalvm-ce-builds/releases/download/jdk-${GRAALVM_VERSION}/graalvm-community-jdk-${GRAALVM_VERSION}_linux-aarch64_bin.tar.gz"
+          mkdir -p /opt/graalvm
+          curl -fSL "$url" -o /tmp/graalvm.tar.gz
+          tar -xzf /tmp/graalvm.tar.gz -C /opt/graalvm --strip-components=1
+          echo "JAVA_HOME=/opt/graalvm" >> "$GITHUB_ENV"
+          echo "GRAALVM_HOME=/opt/graalvm" >> "$GITHUB_ENV"
+          echo "/opt/graalvm/bin" >> "$GITHUB_PATH"
+
+      - name: Verify toolchain
+        run: |
+          java -version
+          native-image --version
+          gcc --version | head -n1
+
+      - name: Change wrapper permissions
+        run: chmod +x ./gradlew
+
+      - name: Run router tests as a native image
+        run: ./gradlew :router:nativeTest
